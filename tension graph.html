@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drama Tension Graph Builder</title>
+  <style>
+    :root {
+      --bg: #f5f5f5;
+      --panel: #ffffff;
+      --line: #1f3fff;
+      --border: #cfcfcf;
+      --text: #111111;
+      --muted: #666666;
+      --soft: #efefef;
+      --danger: #b42318;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .preview-wrap {
+      padding: 20px;
+      overflow: auto;
+    }
+
+    h1 {
+      font-size: 22px;
+      margin: 0 0 8px;
+    }
+
+    .sub {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 16px;
+      background: #fff;
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 16px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    input, select, textarea, button {
+      font: inherit;
+    }
+
+    input, select, textarea {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 10px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 78px;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 9px 12px;
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: #111;
+      color: #fff;
+      border-color: #111;
+    }
+
+    button.danger {
+      color: var(--danger);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 6px;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    th {
+      background: var(--soft);
+      font-weight: 600;
+    }
+
+    td input, td select {
+      width: 100%;
+      padding: 7px 6px;
+      font-size: 12px;
+      border-radius: 8px;
+    }
+
+    .row-actions {
+      width: 60px;
+    }
+
+    .row-actions button {
+      width: 100%;
+      padding: 7px 0;
+    }
+
+    .checkboxes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 12px;
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .check input {
+      width: 16px;
+      height: 16px;
+    }
+
+    .preview-shell {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px;
+      min-width: 980px;
+      width: fit-content;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+    }
+
+    .preview-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .preview-title {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    canvas {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .hint {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 1100px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+      .preview-shell {
+        min-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h1>Drama Tension Graph Builder</h1>
+      <p class="sub">희곡 발제용 tension graph 전용 프로토타입입니다. 왼쪽에서 입력하면 오른쪽 미리보기가 즉시 바뀝니다.</p>
+
+      <section class="panel">
+        <h2>1. 기본 정보</h2>
+        <div class="field-grid">
+          <div class="field full">
+            <label for="title">그래프 제목</label>
+            <input id="title" value="Hay Fever Tension Graph" />
+          </div>
+          <div class="field">
+            <label for="yMax">Y축 최대값</label>
+            <input id="yMax" type="number" min="5" max="20" value="10" />
+          </div>
+          <div class="field">
+            <label for="lineColor">그래프 선 색상</label>
+            <input id="lineColor" type="color" value="#1f3fff" />
+          </div>
+          <div class="field">
+            <label for="canvasWidth">캔버스 너비</label>
+            <input id="canvasWidth" type="number" min="900" max="2400" value="1600" />
+          </div>
+          <div class="field">
+            <label for="canvasHeight">캔버스 높이</label>
+            <input id="canvasHeight" type="number" min="500" max="1400" value="760" />
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>2. 막 설정</h2>
+        <table id="actsTable">
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Start Scene</th>
+              <th>End Scene</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="btn-row">
+          <button type="button" id="addActBtn">+ 막 추가</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>3. 장면 데이터</h2>
+        <table id="scenesTable">
+          <thead>
+            <tr>
+              <th>Scene</th>
+              <th>Page</th>
+              <th>Tension</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="btn-row">
+          <button type="button" id="addSceneBtn">+ 장면 추가</button>
+          <button type="button" id="sortSceneBtn">장면 번호 순 정렬</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>4. 경계선/표시 옵션</h2>
+        <div class="field">
+          <label for="breakPages">막 사이 경계 페이지쌍</label>
+          <textarea id="breakPages">49,53
+85,89</textarea>
+          <div class="hint">한 줄에 하나씩 입력하세요. 예: <code>49,53</code></div>
+        </div>
+        <div class="checkboxes">
+          <label class="check"><input type="checkbox" id="showMarkers" checked /> 점 표시</label>
+          <label class="check"><input type="checkbox" id="showActLines" checked /> 막 경계 점선</label>
+          <label class="check"><input type="checkbox" id="showBreakLines" checked /> 페이지 경계 점선</label>
+          <label class="check"><input type="checkbox" id="showBottomBox" checked /> 하단 표 테두리</label>
+          <label class="check"><input type="checkbox" id="showSceneNumbers" checked /> Scene 숫자 표시</label>
+          <label class="check"><input type="checkbox" id="showPageNumbers" checked /> Page 숫자 표시</label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>5. 내보내기</h2>
+        <div class="btn-row">
+          <button type="button" class="primary" id="downloadBtn">PNG 다운로드</button>
+          <button type="button" id="loadSampleBtn">샘플 다시 불러오기</button>
+        </div>
+      </section>
+    </aside>
+
+    <main class="preview-wrap">
+      <div class="preview-shell">
+        <div class="preview-head">
+          <div class="preview-title">실시간 미리보기</div>
+        </div>
+        <canvas id="graphCanvas" width="1600" height="760"></canvas>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const sampleActs = [
+      { label: 'Act I', start: 1, end: 3 },
+      { label: 'Act II', start: 4, end: 9 },
+      { label: 'Act III', start: 10, end: 11 },
+    ];
+
+    const sampleScenes = [
+      { scene: 1, page: 9, tension: 3 },
+      { scene: 2, page: 26, tension: 2 },
+      { scene: 3, page: 49, tension: 3 },
+      { scene: 4, page: 53, tension: 4 },
+      { scene: 5, page: 59, tension: 6 },
+      { scene: 6, page: 63, tension: 2 },
+      { scene: 7, page: 68, tension: 5 },
+      { scene: 8, page: 72, tension: 4 },
+      { scene: 9, page: 85, tension: 3 },
+      { scene: 10, page: 89, tension: 3 },
+      { scene: 11, page: 108, tension: 2 },
+    ];
+
+    const els = {
+      title: document.getElementById('title'),
+      yMax: document.getElementById('yMax'),
+      lineColor: document.getElementById('lineColor'),
+      canvasWidth: document.getElementById('canvasWidth'),
+      canvasHeight: document.getElementById('canvasHeight'),
+      breakPages: document.getElementById('breakPages'),
+      showMarkers: document.getElementById('showMarkers'),
+      showActLines: document.getElementById('showActLines'),
+      showBreakLines: document.getElementById('showBreakLines'),
+      showBottomBox: document.getElementById('showBottomBox'),
+      showSceneNumbers: document.getElementById('showSceneNumbers'),
+      showPageNumbers: document.getElementById('showPageNumbers'),
+      actsTableBody: document.querySelector('#actsTable tbody'),
+      scenesTableBody: document.querySelector('#scenesTable tbody'),
+      addActBtn: document.getElementById('addActBtn'),
+      addSceneBtn: document.getElementById('addSceneBtn'),
+      sortSceneBtn: document.getElementById('sortSceneBtn'),
+      loadSampleBtn: document.getElementById('loadSampleBtn'),
+      downloadBtn: document.getElementById('downloadBtn'),
+      canvas: document.getElementById('graphCanvas'),
+    };
+
+    function createActRow(act = { label: '', start: '', end: '' }) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input data-key="label" value="${act.label}"></td>
+        <td><input data-key="start" type="number" min="1" value="${act.start}"></td>
+        <td><input data-key="end" type="number" min="1" value="${act.end}"></td>
+        <td class="row-actions"><button type="button" class="danger">삭제</button></td>
+      `;
+      tr.querySelectorAll('input').forEach(input => input.addEventListener('input', render));
+      tr.querySelector('button').addEventListener('click', () => {
+        tr.remove();
+        render();
+      });
+      els.actsTableBody.appendChild(tr);
+    }
+
+    function createSceneRow(scene = { scene: '', page: '', tension: '' }) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input data-key="scene" type="number" min="1" value="${scene.scene}"></td>
+        <td><input data-key="page" type="number" min="1" value="${scene.page}"></td>
+        <td><input data-key="tension" type="number" min="0" step="0.1" value="${scene.tension}"></td>
+        <td class="row-actions"><button type="button" class="danger">삭제</button></td>
+      `;
+      tr.querySelectorAll('input').forEach(input => input.addEventListener('input', render));
+      tr.querySelector('button').addEventListener('click', () => {
+        tr.remove();
+        render();
+      });
+      els.scenesTableBody.appendChild(tr);
+    }
+
+    function loadSamples() {
+      els.actsTableBody.innerHTML = '';
+      els.scenesTableBody.innerHTML = '';
+      sampleActs.forEach(createActRow);
+      sampleScenes.forEach(createSceneRow);
+      els.title.value = 'Hay Fever Tension Graph';
+      els.yMax.value = 10;
+      els.lineColor.value = '#1f3fff';
+      els.canvasWidth.value = 1600;
+      els.canvasHeight.value = 760;
+      els.breakPages.value = '49,53\n85,89';
+      els.showMarkers.checked = true;
+      els.showActLines.checked = true;
+      els.showBreakLines.checked = true;
+      els.showBottomBox.checked = true;
+      els.showSceneNumbers.checked = true;
+      els.showPageNumbers.checked = true;
+      render();
+    }
+
+    function getActs() {
+      return [...els.actsTableBody.querySelectorAll('tr')]
+        .map(tr => ({
+          label: tr.querySelector('[data-key="label"]').value.trim(),
+          start: Number(tr.querySelector('[data-key="start"]').value),
+          end: Number(tr.querySelector('[data-key="end"]').value),
+        }))
+        .filter(a => a.label && Number.isFinite(a.start) && Number.isFinite(a.end));
+    }
+
+    function getScenes() {
+      return [...els.scenesTableBody.querySelectorAll('tr')]
+        .map(tr => ({
+          scene: Number(tr.querySelector('[data-key="scene"]').value),
+          page: Number(tr.querySelector('[data-key="page"]').value),
+          tension: Number(tr.querySelector('[data-key="tension"]').value),
+        }))
+        .filter(s => Number.isFinite(s.scene) && Number.isFinite(s.page) && Number.isFinite(s.tension))
+        .sort((a, b) => a.scene - b.scene);
+    }
+
+    function getBreakPairs() {
+      return els.breakPages.value
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(line => line.split(',').map(v => Number(v.trim())))
+        .filter(pair => pair.length === 2 && pair.every(Number.isFinite));
+    }
+
+    function sceneX(page, minPage, maxPage, left, width) {
+      if (maxPage === minPage) return left + width / 2;
+      return left + ((page - minPage) / (maxPage - minPage)) * width;
+    }
+
+    function fitLabelX(x, min, max, padding = 18) {
+      return Math.min(max - padding, Math.max(min + padding, x));
+    }
+
+    function drawDashedLine(ctx, x, top, bottom) {
+      ctx.save();
+      ctx.setLineDash([8, 6]);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#222';
+      ctx.beginPath();
+      ctx.moveTo(x, top);
+      ctx.lineTo(x, bottom);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function render() {
+      const title = els.title.value.trim() || 'Drama Tension Graph';
+      const yMax = Math.max(1, Number(els.yMax.value) || 10);
+      const lineColor = els.lineColor.value || '#1f3fff';
+      const width = Math.max(900, Number(els.canvasWidth.value) || 1600);
+      const height = Math.max(500, Number(els.canvasHeight.value) || 760);
+      const acts = getActs();
+      const scenes = getScenes();
+      const breakPairs = getBreakPairs();
+
+      const canvas = els.canvas;
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, width, height);
+
+      if (!scenes.length) return;
+
+      const pad = { top: 42, right: 90, bottom: 32, left: 72 };
+      const graphTop = pad.top;
+      const graphBottom = height - 165;
+      const graphHeight = graphBottom - graphTop;
+      const axisBottom = graphBottom;
+      const tableTop = graphBottom;
+      const tableMid = graphBottom + 66;
+      const tableBottom = height - 32;
+      const plotLeft = pad.left;
+      const plotRight = width - pad.right;
+      const plotWidth = plotRight - plotLeft;
+
+      const minPage = Math.min(...scenes.map(s => s.page), ...breakPairs.flat().filter(Number.isFinite));
+      const maxPage = Math.max(...scenes.map(s => s.page), ...breakPairs.flat().filter(Number.isFinite));
+
+      ctx.fillStyle = '#111';
+      ctx.font = 'bold 22px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(title, width / 2, 28);
+
+      ctx.strokeStyle = '#222';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(plotLeft, graphTop, plotWidth, graphHeight);
+
+      ctx.beginPath();
+      ctx.moveTo(plotLeft, axisBottom);
+      ctx.lineTo(plotRight, axisBottom);
+      ctx.stroke();
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#111';
+      ctx.font = '18px Arial';
+
+      for (let y = 0; y <= yMax; y++) {
+        const yPos = graphBottom - (y / yMax) * graphHeight;
+        ctx.beginPath();
+        ctx.moveTo(plotLeft - 7, yPos);
+        ctx.lineTo(plotLeft, yPos);
+        ctx.stroke();
+        ctx.textAlign = 'right';
+        ctx.fillText(String(y), plotLeft - 14, yPos + 6);
+      }
+
+      ctx.save();
+      ctx.translate(22, graphTop + graphHeight / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = 'center';
+      ctx.font = '18px Arial';
+      ctx.fillText('Tension', 0, 0);
+      ctx.restore();
+
+      if (els.showBottomBox.checked) {
+        ctx.strokeRect(plotLeft, tableTop, plotWidth, tableBottom - tableTop);
+        ctx.beginPath();
+        ctx.moveTo(plotLeft, tableMid);
+        ctx.lineTo(plotRight, tableMid);
+        ctx.stroke();
+      }
+
+      const points = scenes.map(s => ({
+        ...s,
+        x: sceneX(s.page, minPage, maxPage, plotLeft, plotWidth),
+        y: graphBottom - (s.tension / yMax) * graphHeight,
+      }));
+
+      if (els.showActLines.checked) {
+        acts.forEach(act => {
+          const first = scenes.find(s => s.scene === act.start);
+          const last = scenes.find(s => s.scene === act.end);
+          if (!first || !last) return;
+          const centerX = (sceneX(first.page, minPage, maxPage, plotLeft, plotWidth) + sceneX(last.page, minPage, maxPage, plotLeft, plotWidth)) / 2;
+          ctx.textAlign = 'center';
+          ctx.font = '18px Arial';
+          ctx.fillText(act.label, centerX, graphTop + 24);
+        });
+      }
+
+      if (els.showBreakLines.checked) {
+        breakPairs.forEach(pair => {
+          const [p1, p2] = pair;
+          drawDashedLine(ctx, sceneX(p1, minPage, maxPage, plotLeft, plotWidth), graphTop, tableTop);
+          drawDashedLine(ctx, sceneX(p2, minPage, maxPage, plotLeft, plotWidth), graphTop, tableTop);
+        });
+      }
+
+      if (els.showActLines.checked) {
+        const actEndPages = acts
+          .map(act => {
+            const s = scenes.find(scene => scene.scene === act.end);
+            return s ? s.page : null;
+          })
+          .filter((page, idx, arr) => Number.isFinite(page) && idx !== arr.length - 1);
+
+        actEndPages.forEach(page => {
+          drawDashedLine(ctx, sceneX(page, minPage, maxPage, plotLeft, plotWidth), graphTop, tableTop);
+        });
+      }
+
+      ctx.save();
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      points.forEach((p, i) => {
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.stroke();
+      ctx.restore();
+
+      if (els.showMarkers.checked) {
+        ctx.fillStyle = lineColor;
+        points.forEach(p => {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      ctx.strokeStyle = '#222';
+      ctx.lineWidth = 1.5;
+      points.forEach((p, index) => {
+        ctx.beginPath();
+        ctx.moveTo(p.x, tableTop);
+        ctx.lineTo(p.x, tableBottom);
+        ctx.stroke();
+
+        if (els.showSceneNumbers.checked) {
+          ctx.font = '18px Arial';
+          ctx.fillStyle = '#111';
+          ctx.textAlign = 'center';
+          const sceneLabelY = tableTop + 33;
+          ctx.fillText(String(p.scene), fitLabelX(p.x, plotLeft, plotRight), sceneLabelY);
+        }
+
+        if (els.showPageNumbers.checked) {
+          ctx.font = '18px Arial';
+          ctx.fillStyle = '#111';
+          ctx.textAlign = 'center';
+          const pageLabelY = tableMid + 39;
+          let x = p.x;
+          if (index === 0) x = fitLabelX(p.x, plotLeft, plotRight, 10);
+          if (index === points.length - 1) x = fitLabelX(p.x, plotLeft, plotRight, 10);
+          ctx.fillText(String(p.page), x, pageLabelY);
+        }
+      });
+
+      ctx.font = '18px Arial';
+      ctx.fillStyle = '#111';
+      ctx.textAlign = 'left';
+      ctx.fillText('Scene', plotRight + 32, tableTop + 33);
+      ctx.fillText('Page', plotRight + 32, tableMid + 39);
+    }
+
+    function downloadCanvas() {
+      render();
+      const link = document.createElement('a');
+      const safeTitle = (els.title.value.trim() || 'tension-graph').replace(/[^a-z0-9가-힣_-]+/gi, '_');
+      link.download = `${safeTitle}.png`;
+      link.href = els.canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    els.addActBtn.addEventListener('click', () => {
+      createActRow({ label: `Act ${els.actsTableBody.children.length + 1}`, start: '', end: '' });
+      render();
+    });
+
+    els.addSceneBtn.addEventListener('click', () => {
+      const rows = getScenes();
+      const nextScene = rows.length ? Math.max(...rows.map(r => r.scene)) + 1 : 1;
+      const nextPage = rows.length ? rows[rows.length - 1].page + 5 : 1;
+      createSceneRow({ scene: nextScene, page: nextPage, tension: 0 });
+      render();
+    });
+
+    els.sortSceneBtn.addEventListener('click', () => {
+      const rows = getScenes();
+      els.scenesTableBody.innerHTML = '';
+      rows.forEach(createSceneRow);
+      render();
+    });
+
+    els.loadSampleBtn.addEventListener('click', loadSamples);
+    els.downloadBtn.addEventListener('click', downloadCanvas);
+
+    [
+      els.title, els.yMax, els.lineColor, els.canvasWidth, els.canvasHeight,
+      els.breakPages, els.showMarkers, els.showActLines, els.showBreakLines,
+      els.showBottomBox, els.showSceneNumbers, els.showPageNumbers,
+    ].forEach(el => el.addEventListener('input', render));
+
+    loadSamples();
+  </script>
+</body>
+</html>
