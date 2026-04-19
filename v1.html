@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>K-culture Magazine Prototype</title>
+  <style>
+    :root {
+      --bg-light: #e9e9e9;
+      --bg-dark: #666666;
+      --text-dark: #111111;
+      --text-light: #f7f7f7;
+      --border: #d0d0d0;
+      --panel: #ffffff;
+      --shadow: 0 12px 30px rgba(0,0,0,0.08);
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f4f4;
+      color: #111;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      min-height: 100vh;
+    }
+
+    .controls {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .controls h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+
+    .controls p {
+      margin: 0 0 20px;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    .group {
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #ededed;
+    }
+
+    .group h2 {
+      margin: 0 0 14px;
+      font-size: 16px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 12px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      margin-top: 6px;
+      padding: 12px 14px;
+      border: 1px solid #d7d7d7;
+      border-radius: 12px;
+      font-size: 14px;
+      background: #fff;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 88px;
+      line-height: 1.45;
+    }
+
+    .inline {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .pages-nav {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .page-btn {
+      border: 1px solid #d7d7d7;
+      background: white;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .page-btn.active {
+      background: #111;
+      color: white;
+      border-color: #111;
+    }
+
+    .preview-area {
+      padding: 26px;
+      overflow: auto;
+    }
+
+    .preview-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .preview-toolbar h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .preview-shell {
+      display: grid;
+      grid-template-columns: minmax(320px, 1080px);
+      justify-content: center;
+      gap: 22px;
+    }
+
+    .canvas {
+      width: min(92vw, 1080px);
+      aspect-ratio: 1 / 1;
+      background: var(--bg-light);
+      border-radius: 0;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .thumbs {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px;
+    }
+
+    .thumb {
+      aspect-ratio: 1 / 1;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 14px;
+      padding: 8px;
+      cursor: pointer;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .thumb.active {
+      outline: 3px solid #111;
+    }
+
+    .thumb span {
+      position: absolute;
+      left: 8px;
+      bottom: 8px;
+      background: rgba(255,255,255,0.88);
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .thumb-mini {
+      width: 100%;
+      height: 100%;
+      background: #ececec;
+      position: relative;
+      overflow: hidden;
+      border-radius: 10px;
+    }
+
+    .thumb-mini img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .slide {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    .slide.light {
+      background: var(--bg-light);
+      color: var(--text-dark);
+    }
+
+    .slide.dark {
+      background: var(--bg-dark);
+      color: var(--text-light);
+    }
+
+    .cover-layout {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 7%;
+      text-align: center;
+    }
+
+    .cover-title {
+      font-size: clamp(88px, 14vw, 210px);
+      font-weight: 800;
+      line-height: 0.9;
+      letter-spacing: -0.04em;
+      word-break: keep-all;
+    }
+
+    .definition-bg {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      filter: grayscale(100%) blur(10px);
+      transform: scale(1.08);
+      opacity: 0.75;
+    }
+
+    .definition-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(80,80,80,0.45);
+    }
+
+    .definition-content {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 8%;
+      color: white;
+    }
+
+    .definition-inner {
+      max-width: 72%;
+    }
+
+    .definition-korean {
+      font-size: clamp(56px, 6vw, 108px);
+      font-weight: 800;
+      line-height: 1.05;
+      margin-bottom: 12px;
+      word-break: keep-all;
+    }
+
+    .definition-english {
+      font-size: clamp(48px, 5.2vw, 92px);
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 26px;
+      letter-spacing: -0.04em;
+    }
+
+    .divider {
+      width: 4px;
+      height: 90px;
+      background: rgba(255,255,255,0.9);
+      margin: 0 auto 26px;
+      border-radius: 999px;
+    }
+
+    .definition-desc {
+      font-size: clamp(28px, 3.1vw, 54px);
+      line-height: 1.08;
+      font-weight: 500;
+    }
+
+    .keyword-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: 100%;
+    }
+
+    .keyword-split.reverse {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .keyword-text-col {
+      padding: 7% 7% 6%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: var(--bg-light);
+      color: var(--text-dark);
+    }
+
+    .keyword-image-col {
+      position: relative;
+      background: #ddd;
+    }
+
+    .keyword-image-col img,
+    .image-fill img,
+    .center-image-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .hash-title {
+      font-size: clamp(62px, 8vw, 152px);
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+      word-break: break-word;
+    }
+
+    .detail-list {
+      font-size: clamp(24px, 3.2vw, 52px);
+      line-height: 1.18;
+      font-weight: 400;
+      white-space: pre-line;
+    }
+
+    .keyword-top {
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      padding: 6% 6% 5%;
+      background: var(--bg-light);
+      color: var(--text-dark);
+      gap: 2%;
+    }
+
+    .center-title {
+      text-align: center;
+      font-size: clamp(72px, 8.5vw, 164px);
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+    }
+
+    .center-subtext {
+      text-align: center;
+      font-size: clamp(24px, 3vw, 48px);
+      line-height: 1.12;
+      white-space: pre-line;
+    }
+
+    .center-image-wrap {
+      width: 78%;
+      height: 74%;
+      margin: 0 auto;
+      overflow: hidden;
+      background: #d9d9d9;
+    }
+
+    .ending-layout {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 8%;
+    }
+
+    .ending-inner {
+      max-width: 76%;
+    }
+
+    .ending-copy {
+      font-size: clamp(34px, 4.6vw, 76px);
+      line-height: 1.18;
+      font-weight: 400;
+      margin-bottom: 32px;
+    }
+
+    .ending-handle {
+      font-size: clamp(46px, 5.5vw, 96px);
+      line-height: 1.05;
+      font-weight: 500;
+    }
+
+    .muted-note {
+      font-size: 12px;
+      color: #666;
+      line-height: 1.5;
+      margin-top: 8px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 980px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .canvas {
+        width: min(94vw, 900px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="controls">
+      <h1>K-culture magazine</h1>
+      <p>고정 순서: <strong>한국어 크게 → 영어 설명 → 키워드 1~4 → 마무리</strong><br>지금 버전은 페이지별 텍스트/이미지 실시간 미리보기 프로토타입입니다.</p>
+
+      <div class="group">
+        <h2>페이지 선택</h2>
+        <div class="pages-nav" id="pageNav"></div>
+        <div class="muted-note">현재는 7페이지 고정 구조입니다. 나중에 키워드 페이지 수를 가변으로 바꾸면 됩니다.</div>
+      </div>
+
+      <div class="group">
+        <h2>공통 설정</h2>
+        <div class="inline">
+          <label>기본 배경
+            <select id="globalTheme">
+              <option value="light">Light gray</option>
+              <option value="dark">Dark gray</option>
+            </select>
+          </label>
+          <label>키워드 기본 레이아웃
+            <select id="keywordLayoutPreset">
+              <option value="mixed">Mixed</option>
+              <option value="split-left">Split left image</option>
+              <option value="split-right">Split right image</option>
+              <option value="top-image">Top title + image</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div id="editor"></div>
+    </aside>
+
+    <main class="preview-area">
+      <div class="preview-toolbar">
+        <h2 id="currentPageLabel">미리보기</h2>
+      </div>
+
+      <div class="preview-shell">
+        <div class="canvas" id="canvas"></div>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const appState = {
+      currentPage: 0,
+      globalTheme: 'light',
+      keywordLayoutPreset: 'mixed',
+      pages: [
+        {
+          type: 'cover-korean',
+          name: '1 한국어 크게',
+          koreanTitle: '추구미',
+          theme: 'light'
+        },
+        {
+          type: 'definition-english',
+          name: '2 영어 설명',
+          koreanTitle: '추구미',
+          englishTitle: '[chugumi]',
+          description: ': ideal look, vibe, aesthetic\nthat you pursue',
+          image: ''
+        },
+        {
+          type: 'keyword',
+          name: '3 키워드 1',
+          title: '#Girlie',
+          details: 'soft details\nclean silhouette\nlight tone',
+          image: '',
+          layout: 'split-left'
+        },
+        {
+          type: 'keyword',
+          name: '4 키워드 2',
+          title: '#Sporty-casual',
+          details: 'easy layers\nrelaxed fit\ndaily mood',
+          image: '',
+          layout: 'top-image'
+        },
+        {
+          type: 'keyword',
+          name: '5 키워드 3',
+          title: '#Comfy',
+          details: 'soft texture\nlow effort\ncozy styling',
+          image: '',
+          layout: 'split-right'
+        },
+        {
+          type: 'keyword',
+          name: '6 키워드 4',
+          title: '#Chic',
+          details: 'sharp mood\nsimple pieces\nconfident styling',
+          image: '',
+          layout: 'top-image'
+        },
+        {
+          type: 'ending',
+          name: '7 마무리',
+          copy: 'real bits of Korean culture trends\nthat you\'ll never know',
+          handle: 'Wanna find more?\n@Kbits_foru',
+          theme: 'dark'
+        }
+      ]
+    };
+
+    const pageNav = document.getElementById('pageNav');
+    const editor = document.getElementById('editor');
+    const canvas = document.getElementById('canvas');
+    const thumbs = document.getElementById('thumbs');
+    const currentPageLabel = document.getElementById('currentPageLabel');
+    const globalTheme = document.getElementById('globalTheme');
+    const keywordLayoutPreset = document.getElementById('keywordLayoutPreset');
+
+    globalTheme.addEventListener('change', (e) => {
+      appState.globalTheme = e.target.value;
+      render();
+    });
+
+    keywordLayoutPreset.addEventListener('change', (e) => {
+      appState.keywordLayoutPreset = e.target.value;
+      appState.pages.forEach((page, index) => {
+        if (page.type === 'keyword' && e.target.value !== 'mixed') {
+          page.layout = e.target.value;
+        } else if (page.type === 'keyword' && e.target.value === 'mixed') {
+          const fallback = ['split-left', 'top-image', 'split-right', 'top-image'];
+          page.layout = fallback[index - 2] || 'split-left';
+        }
+      });
+      render();
+    });
+
+    function escapeHtml(str = '') {
+      return str
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function multilineToHtml(text = '') {
+      return escapeHtml(text).replace(/\n/g, '<br>');
+    }
+
+    function renderPageNav() {
+      pageNav.innerHTML = appState.pages.map((page, index) => `
+        <button class="page-btn ${index === appState.currentPage ? 'active' : ''}" data-index="${index}">
+          ${page.name}
+        </button>
+      `).join('');
+
+      pageNav.querySelectorAll('.page-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          appState.currentPage = Number(btn.dataset.index);
+          render();
+        });
+      });
+    }
+
+    function renderEditor() {
+      const page = appState.pages[appState.currentPage];
+      let html = `<div class="group"><h2>${page.name} 편집</h2>`;
+
+      if (page.type === 'cover-korean') {
+        html += `
+          <label>한국어 큰 제목
+            <input type="text" id="field-koreanTitle" value="${escapeHtml(page.koreanTitle || '')}" />
+          </label>
+          <div class="muted-note">1페이지는 큰 한국어 타이틀만 강하게 보여주는 용도입니다.</div>
+        `;
+      }
+
+      if (page.type === 'definition-english') {
+        html += `
+          <label>한국어 제목
+            <input type="text" id="field-koreanTitle" value="${escapeHtml(page.koreanTitle || '')}" />
+          </label>
+          <label>영어/발음 표기
+            <input type="text" id="field-englishTitle" value="${escapeHtml(page.englishTitle || '')}" />
+          </label>
+          <label>설명
+            <textarea id="field-description">${escapeHtml(page.description || '')}</textarea>
+          </label>
+          <label>배경 이미지
+            <input type="file" id="field-image" accept="image/*" />
+          </label>
+          <label>또는 이미지 URL
+            <input type="text" id="field-imageUrl" value="${escapeHtml(page.image || '')}" />
+          </label>
+        `;
+      }
+
+      if (page.type === 'keyword') {
+        html += `
+          <label>키워드 제목
+            <input type="text" id="field-title" value="${escapeHtml(page.title || '')}" />
+          </label>
+          <label>설명 줄글
+            <textarea id="field-details">${escapeHtml(page.details || '')}</textarea>
+          </label>
+          <label>레이아웃
+            <select id="field-layout">
+              <option value="split-left" ${page.layout === 'split-left' ? 'selected' : ''}>Split left image</option>
+              <option value="split-right" ${page.layout === 'split-right' ? 'selected' : ''}>Split right image</option>
+              <option value="top-image" ${page.layout === 'top-image' ? 'selected' : ''}>Top title + image</option>
+            </select>
+          </label>
+          <label>이미지 업로드
+            <input type="file" id="field-image" accept="image/*" />
+          </label>
+          <label>또는 이미지 URL
+            <input type="text" id="field-imageUrl" value="${escapeHtml(page.image || '')}" />
+          </label>
+        `;
+      }
+
+      if (page.type === 'ending') {
+        html += `
+          <label>마무리 카피
+            <textarea id="field-copy">${escapeHtml(page.copy || '')}</textarea>
+          </label>
+          <label>핸들 / CTA
+            <textarea id="field-handle">${escapeHtml(page.handle || '')}</textarea>
+          </label>
+          <label>배경 톤
+            <select id="field-theme">
+              <option value="dark" ${page.theme === 'dark' ? 'selected' : ''}>Dark gray</option>
+              <option value="light" ${page.theme === 'light' ? 'selected' : ''}>Light gray</option>
+            </select>
+          </label>
+        `;
+      }
+
+      html += '</div>';
+      editor.innerHTML = html;
+
+      bindEditorEvents(page);
+    }
+
+    function bindEditorEvents(page) {
+      const bind = (id, key) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input', (e) => {
+          page[key] = e.target.value;
+          renderPreviewOnly();
+        });
+      };
+
+      bind('field-koreanTitle', 'koreanTitle');
+      bind('field-englishTitle', 'englishTitle');
+      bind('field-description', 'description');
+      bind('field-title', 'title');
+      bind('field-details', 'details');
+      bind('field-copy', 'copy');
+      bind('field-handle', 'handle');
+      bind('field-imageUrl', 'image');
+
+      const layoutEl = document.getElementById('field-layout');
+      if (layoutEl) {
+        layoutEl.addEventListener('change', (e) => {
+          page.layout = e.target.value;
+          renderPreviewOnly();
+        });
+      }
+
+      const themeEl = document.getElementById('field-theme');
+      if (themeEl) {
+        themeEl.addEventListener('change', (e) => {
+          page.theme = e.target.value;
+          renderPreviewOnly();
+        });
+      }
+
+      const imageInput = document.getElementById('field-image');
+      if (imageInput) {
+        imageInput.addEventListener('change', (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            page.image = reader.result;
+            const urlInput = document.getElementById('field-imageUrl');
+            if (urlInput) urlInput.value = page.image;
+            renderPreviewOnly();
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+    }
+
+    function renderKeywordSlide(page) {
+      const title = multilineToHtml(page.title || '#Keyword');
+      const details = multilineToHtml(page.details || 'details');
+      const imageHtml = page.image
+        ? `<img src="${page.image}" alt="keyword image" />`
+        : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#777;font-size:24px;">image</div>`;
+
+      if (page.layout === 'top-image') {
+        return `
+          <div class="slide light keyword-top">
+            <div class="center-title">${title}</div>
+            <div class="center-subtext">${details}</div>
+            <div class="center-image-wrap">${imageHtml}</div>
+          </div>
+        `;
+      }
+
+      if (page.layout === 'split-right') {
+        return `
+          <div class="slide light keyword-split reverse">
+            <div class="keyword-text-col">
+              <div class="hash-title">${title}</div>
+              <div class="detail-list">${details}</div>
+            </div>
+            <div class="keyword-image-col">${imageHtml}</div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="slide light keyword-split">
+          <div class="keyword-image-col">${imageHtml}</div>
+          <div class="keyword-text-col">
+            <div class="hash-title">${title}</div>
+            <div class="detail-list">${details}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSlide(page) {
+      const pageTheme = page.theme || appState.globalTheme;
+
+      if (page.type === 'cover-korean') {
+        return `
+          <div class="slide ${pageTheme}">
+            <div class="cover-layout">
+              <div class="cover-title">${multilineToHtml(page.koreanTitle || '추구미')}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (page.type === 'definition-english') {
+        const bg = page.image
+          ? `<div class="definition-bg" style="background-image:url('${page.image}')"></div>`
+          : `<div class="definition-bg" style="background:#7c7c7c"></div>`;
+        return `
+          <div class="slide dark">
+            ${bg}
+            <div class="definition-overlay"></div>
+            <div class="definition-content">
+              <div class="definition-inner">
+                <div class="definition-korean">${multilineToHtml(page.koreanTitle || '추구미')}</div>
+                <div class="definition-english">${multilineToHtml(page.englishTitle || '[chugumi]')}</div>
+                <div class="divider"></div>
+                <div class="definition-desc">${multilineToHtml(page.description || ': ideal look, vibe, aesthetic')}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (page.type === 'keyword') {
+        return renderKeywordSlide(page);
+      }
+
+      if (page.type === 'ending') {
+        return `
+          <div class="slide ${pageTheme}">
+            <div class="ending-layout">
+              <div class="ending-inner">
+                <div class="ending-copy">${multilineToHtml(page.copy || '')}</div>
+                <div class="divider" style="height:80px"></div>
+                <div class="ending-handle">${multilineToHtml(page.handle || '')}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      return '<div class="slide light"></div>';
+    }
+
+    function renderThumb(page, index) {
+      const label = page.name;
+      const img = page.image ? `<img src="${page.image}" alt="thumb image" />` : '';
+      return `
+        <button class="thumb ${index === appState.currentPage ? 'active' : ''}" data-index="${index}">
+          <div class="thumb-mini">${img}</div>
+          <span>${label}</span>
+        </button>
+      `;
+    }
+
+    function renderPreviewOnly() {
+      const page = appState.pages[appState.currentPage];
+      currentPageLabel.textContent = `${page.name} 미리보기`;
+      canvas.innerHTML = renderSlide(page);
+      thumbs.innerHTML = appState.pages.map(renderThumb).join('');
+      thumbs.querySelectorAll('.thumb').forEach(btn => {
+        btn.addEventListener('click', () => {
+          appState.currentPage = Number(btn.dataset.index);
+          render();
+        });
+      });
+      renderPageNav();
+    }
+
+    function render() {
+      renderPageNav();
+      renderEditor();
+      renderPreviewOnly();
+    }
+
+    render();
+  </script>
+</body>
+</html>
