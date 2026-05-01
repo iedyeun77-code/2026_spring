@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>K-culture Layout Builder Final</title>
+  <style>
+    :root{
+      --bg:#f2f2f2;--panel:#fff;--line:#d8d8d8;--text:#111;--muted:#666;--shadow:0 14px 34px rgba(0,0,0,.12);
+      --dark:#666;--light:#e8e8e8;--accent:#111;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+    button,input,textarea,select{font:inherit}
+    button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 10px;font-size:13px;font-weight:700;cursor:pointer}
+    button.primary{background:#111;color:#fff;border-color:#111}
+    button.danger{color:#8a1f1f}
+    .app{display:grid;grid-template-columns:380px 1fr;min-height:100vh}
+    .sidebar{background:var(--panel);border-right:1px solid var(--line);padding:18px;max-height:100vh;overflow:auto}
+    .main{padding:20px;max-height:100vh;overflow:auto}
+    h1{font-size:25px;margin:0 0 8px;line-height:1.1}.intro{font-size:13px;color:var(--muted);line-height:1.45;margin:0 0 14px}
+    .status{display:inline-block;background:#eee;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:700;color:#555;margin-bottom:14px}
+    .section{border-bottom:1px solid #eee;padding-bottom:16px;margin-bottom:18px}.section h2{font-size:16px;margin:0 0 10px}
+    .toolbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}.hint{font-size:12px;color:var(--muted);line-height:1.45;margin:6px 0 0}
+    label{display:block;font-size:13px;font-weight:700;margin:0 0 11px}input[type=text],textarea,select{width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff}textarea{min-height:74px;resize:vertical;line-height:1.35}input[type=range]{width:100%;margin-top:6px}
+    .page-list{display:grid;gap:9px}.page-card{border:1px solid var(--line);border-radius:12px;padding:11px;background:#fff;cursor:pointer}.page-card.active{outline:3px solid #111}.page-top{display:flex;justify-content:space-between;gap:8px}.page-num{font-size:11px;color:var(--muted);font-weight:700}.page-layout{font-size:13px;font-weight:800}.page-title{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.35}.mini{font-size:11px;padding:5px 7px;border-radius:8px}
+    .preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}.preview-head h2{margin:0;font-size:20px}.preview-tools{display:flex;gap:8px;flex-wrap:wrap}
+    .canvas{width:min(62vw,680px);aspect-ratio:1/1;margin:0 auto;background:#ddd;box-shadow:var(--shadow);position:relative;overflow:hidden}.slide{position:absolute;inset:0;overflow:hidden}.slide.light{background:var(--light);color:#111}.slide.dark{background:var(--dark);color:#fff}
+    .layout{position:absolute;inset:0}.hero{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:0}.hero-title{font-weight:900;letter-spacing:-.055em;line-height:.9;word-break:keep-all}.definition-overlay{position:absolute;inset:0;background:rgba(60,60,60,.46);pointer-events:none}.definition-content{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:8%;pointer-events:none}.definition-inner{max-width:78%}.def-ko{font-weight:900;line-height:1.02;letter-spacing:-.04em}.def-en{font-weight:800;line-height:1;margin-top:10px;letter-spacing:-.04em}.bar{width:4px;height:76px;background:rgba(255,255,255,.92);border-radius:99px;margin:20px auto}.def-desc{font-weight:500;line-height:1.12;white-space:pre-line}.split{display:grid;grid-template-columns:1fr 1fr;width:100%;height:100%}.split-text{padding:7%;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;background:var(--light);color:#111}.hash-title{font-weight:900;line-height:.95;letter-spacing:-.05em;word-break:break-word}.details{line-height:1.18;white-space:pre-line}.top-layout{display:grid;grid-template-rows:auto 1fr;gap:3%;padding:6%;height:100%;background:var(--light);color:#111}.top-text{text-align:center;overflow:hidden}.top-title{font-weight:900;line-height:.95;letter-spacing:-.05em}.top-desc{line-height:1.14;white-space:pre-line;margin-top:8px}.top-stage{position:relative;width:88%;height:78%;margin:0 auto;overflow:hidden;background:#d6d6d6}.ending{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7%;padding:8%;background:var(--dark);color:#fff;text-align:center}.ending-text{display:flex;align-items:center;justify-content:center;overflow:hidden;width:100%}.ending-copy{line-height:1.14;white-space:pre-line}.ending-stage{display:none}
+    .image-stage{position:relative;width:100%;height:100%;overflow:hidden;background:#d6d6d6}.image-layer{position:absolute;left:50%;top:50%;transform-origin:center center;cursor:grab;user-select:none;touch-action:none;will-change:transform,width,height}.image-layer:active{cursor:grabbing}.image-layer img{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none;user-select:none;-webkit-user-drag:none}.image-layer.selected{outline:3px solid #111;outline-offset:0}.resize-handle{position:absolute;width:18px;height:18px;right:-10px;bottom:-10px;border:2px solid #fff;background:#111;border-radius:50%;box-shadow:0 1px 5px rgba(0,0,0,.35);cursor:nwse-resize;touch-action:none;display:none}.image-layer.selected .resize-handle{display:block}.placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#777;font-size:18px;background:#d6d6d6;pointer-events:none}.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:9px;margin-top:18px}.thumb{aspect-ratio:1/1;position:relative;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden;padding:0}.thumb.active{outline:3px solid #111}.thumb-label{position:absolute;left:6px;bottom:6px;background:rgba(255,255,255,.92);border-radius:99px;padding:3px 7px;font-size:11px;font-weight:800}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.range-head{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px}.checkrow{display:flex;gap:8px;align-items:center;font-size:13px;font-weight:700;margin-bottom:10px}.checkrow input{margin:0}
+    @media(max-width:980px){.app{grid-template-columns:1fr}.sidebar{max-height:none;border-right:0;border-bottom:1px solid var(--line)}.main{max-height:none}.canvas{width:min(92vw,620px)}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <h1>K-culture layout builder</h1>
+    <p class="intro">이미지를 직접 잡아 이동하고, 모서리 핸들을 잡아 비율대로 확대/축소하는 새 구조입니다. Ctrl+Z / Ctrl+Y를 지원합니다.</p>
+    <div class="status" id="status">준비됨</div>
+    <div class="section"><h2>페이지 관리</h2><div class="toolbar"><button class="primary" id="addPage">+ 페이지</button><button id="duplicatePage">복제</button><button id="undoBtn">되돌리기</button><button id="redoBtn">다시하기</button><button class="danger" id="resetAll">초기화</button></div><div class="page-list" id="pageList"></div></div>
+    <div class="section"><h2>현재 페이지 편집</h2><div id="editor"></div></div>
+  </aside>
+  <main class="main">
+    <div class="preview-head"><h2 id="previewTitle">미리보기</h2><div class="preview-tools"><button id="downloadPng">PNG 저장</button></div></div>
+    <div class="canvas" id="canvas"></div>
+    <div class="thumbs" id="thumbs"></div>
+  </main>
+</div>
+<script>
+const STORAGE_KEY='kculture_builder_final_object_v1';
+const layouts=[
+  ['korean-hero','Title'],['definition-overlay','Definition overlay'],['split-left','Split left image'],['split-right','Split right image'],['top-title-image','Top title + image'],['ending','Ending image CTA']
+];
+const $=id=>document.getElementById(id);
+let state=loadState();
+let undoStack=[];let redoStack=[];let saveTimer=null;let drag=null;
+function uid(){return 'id_'+Math.random().toString(36).slice(2)+Date.now().toString(36)}
+function imageObj(scale=1.15){return {id:uid(),src:'',x:0,y:0,w:360,h:360,scale,selected:false}}
+function page(layout){
+  const base={id:uid(),layout,theme:'light',title:'#Keyword',details:'soft details\nclean silhouette',titleSize:84,bodySize:34,nowrapTitle:false,nowrapBody:false};
+  if(layout==='korean-hero')return {...base,koreanTitle:'추구미',titleSize:150,theme:'light'};
+  if(layout==='definition-overlay')return {...base,theme:'dark',koreanTitle:'추구미',englishTitle:'[chugumi]',description:': ideal look, vibe, aesthetic\nthat you pursue',image:imageObj(1.35),titleSize:76,bodySize:35};
+  if(layout==='split-left')return {...base,title:'#Girlie',details:'soft details\nclean silhouette\nlight tone',image:imageObj(1.25),titleSize:78,bodySize:34};
+  if(layout==='split-right')return {...base,title:'#Comfy',details:'soft texture\ncozy styling\nlow effort mood',image:imageObj(1.25),titleSize:78,bodySize:34};
+  if(layout==='top-title-image')return {...base,title:'#Sporty-casual',details:'easy layers\nrelaxed fit\ndaily mood',image:imageObj(1.55),titleSize:76,bodySize:32};
+  if(layout==='ending')return {...base,theme:'dark',copy:'real bits of Korean culture trends\nthat you\'ll never know',handle:'Wanna find more?\n@Kbits_foru',titleSize:42,bodySize:54,nowrapTitle:false,nowrapBody:false};
+}
+function defaultState(){return {current:0,pages:[page('korean-hero'),page('definition-overlay'),page('split-left'),page('split-right'),page('top-title-image'),page('ending')]}}
+function normalize(s){
+  if(!s||!Array.isArray(s.pages)||!s.pages.length)return defaultState();
+  s.pages=s.pages.map(p=>{if(!p.id)p.id=uid(); if(['definition-overlay','split-left','split-right','top-title-image'].includes(p.layout)&&!p.image)p.image=imageObj(); if(p.layout==='ending')delete p.image; if(p.image&&!p.image.id)p.image.id=uid(); if(p.image&&p.image.h==null)p.image.h=p.image.w||360; if(p.titleSize==null)p.titleSize=76; if(p.bodySize==null)p.bodySize=34; return p});
+  if(typeof s.current!=='number'||s.current<0)s.current=0;if(s.current>=s.pages.length)s.current=s.pages.length-1;return s;
+}
+function loadState(){try{return normalize(JSON.parse(localStorage.getItem(STORAGE_KEY)))}catch(e){return defaultState()}}
+function snapshot(){return JSON.stringify(state)}
+function restore(raw){state=normalize(JSON.parse(raw));renderAll();saveNow()}
+function pushUndo(){undoStack.push(snapshot()); if(undoStack.length>80)undoStack.shift(); redoStack=[]; updateStatus()}
+function undo(){if(!undoStack.length)return; redoStack.push(snapshot()); restore(undoStack.pop())}
+function redo(){if(!redoStack.length)return; undoStack.push(snapshot()); restore(redoStack.pop())}
+function saveNow(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));$('status').textContent='자동저장 완료'}
+function queueSave(){clearTimeout(saveTimer);$('status').textContent='저장 중...';saveTimer=setTimeout(saveNow,160)}
+function updateStatus(){ $('status').textContent=`준비됨 · 되돌리기 ${undoStack.length}개`; }
+function esc(v=''){return String(v).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
+function br(v=''){return esc(v).replace(/\n/g,'<br>')}
+function label(l){return layouts.find(x=>x[0]===l)?.[1]||l}
+function cur(){return state.pages[state.current]}
+function imgStyle(img){return `width:${img.w}px;height:${img.h||img.w}px;transform:translate(calc(-50% + ${img.x}px),calc(-50% + ${img.y}px));`}
+function renderImageStage(p, cls=''){
+  const img=p.image;
+  return `<div class="image-stage ${cls}" data-stage="1">${img&&img.src?`<div class="image-layer ${img.selected?'selected':''}" data-imgid="${img.id}" style="${imgStyle(img)}"><img src="${img.src}" alt="uploaded"><span class="resize-handle" data-handle="1"></span></div>`:`<div class="placeholder">이미지 업로드</div>`}</div>`;
+}
+function renderSlide(p){
+  if(p.layout==='korean-hero')return `<div class="slide ${p.theme||'light'}"><div class="hero"><div class="hero-title" style="font-size:${p.titleSize}px;white-space:${p.nowrapTitle?'nowrap':'normal'}">${br(p.koreanTitle||'')}</div></div></div>`;
+  if(p.layout==='definition-overlay')return `<div class="slide dark"><div class="definition-content"><div class="definition-inner"><div class="def-ko" style="font-size:${p.titleSize}px;white-space:${p.nowrapTitle?'nowrap':'normal'}">${br(p.koreanTitle||'')}</div><div class="def-en" style="font-size:${Math.round(p.titleSize*.72)}px;white-space:${p.nowrapTitle?'nowrap':'normal'}">${br(p.englishTitle||'')}</div><div class="bar"></div><div class="def-desc" style="font-size:${p.bodySize}px;white-space:${p.nowrapBody?'nowrap':'pre-line'}">${br(p.description||'')}</div></div></div></div>`;
+  if(p.layout==='split-left'||p.layout==='split-right'){
+    const img=renderImageStage(p); const txt=`<div class="split-text"><div class="hash-title" style="font-size:${p.titleSize}px;white-space:${p.nowrapTitle?'nowrap':'normal'}">${br(p.title||'')}</div><div class="details" style="font-size:${p.bodySize}px;white-space:${p.nowrapBody?'nowrap':'pre-line'}">${br(p.details||'')}</div></div>`;
+    return `<div class="slide light"><div class="split">${p.layout==='split-left'?img+txt:txt+img}</div></div>`;
+  }
+  if(p.layout==='top-title-image')return `<div class="slide light"><div class="top-layout"><div class="top-text"><div class="top-title" style="font-size:${p.titleSize}px;white-space:${p.nowrapTitle?'nowrap':'normal'}">${br(p.title||'')}</div><div class="top-desc" style="font-size:${p.bodySize}px;white-space:${p.nowrapBody?'nowrap':'pre-line'}">${br(p.details||'')}</div></div><div class="top-stage">${renderImageStage(p)}</div></div></div>`;
+  if(p.layout==='ending')return `<div class="slide dark"><div class="ending"><div class="ending-text"><div class="ending-copy" style="font-size:${p.titleSize}px;white-space:${p.nowrapTitle?'nowrap':'pre-line'}">${br(p.copy||'')}</div></div><div class="ending-text"><div style="font-size:${p.bodySize}px;line-height:1.05;white-space:${p.nowrapBody?'nowrap':'pre-line'}">${br(p.handle||'')}</div></div></div></div>`;
+  return '';
+}
+function renderCanvas(){const p=cur();$('previewTitle').textContent=`PAGE ${state.current+1} · ${label(p.layout)}`;$('canvas').innerHTML=renderSlide(p);bindCanvas()}
+function renderPages(){
+  $('pageList').innerHTML=state.pages.map((p,i)=>`<div class="page-card ${i===state.current?'active':''}" data-i="${i}"><div class="page-top"><div><div class="page-num">PAGE ${i+1}</div><div class="page-layout">${esc(label(p.layout))}</div></div><div><button class="mini up" data-i="${i}">↑</button><button class="mini down" data-i="${i}">↓</button><button class="mini del" data-i="${i}">삭제</button></div></div><div class="page-title">${esc(p.koreanTitle||p.title||p.copy||'')}</div></div>`).join('');
+  document.querySelectorAll('.page-card').forEach(c=>c.onclick=e=>{if(e.target.closest('button'))return;state.current=+c.dataset.i;renderAll()});
+  document.querySelectorAll('.up').forEach(b=>b.onclick=e=>{e.stopPropagation();let i=+b.dataset.i;if(!i)return;pushUndo();[state.pages[i-1],state.pages[i]]=[state.pages[i],state.pages[i-1]];state.current=i-1;renderAll();queueSave()});
+  document.querySelectorAll('.down').forEach(b=>b.onclick=e=>{e.stopPropagation();let i=+b.dataset.i;if(i>=state.pages.length-1)return;pushUndo();[state.pages[i+1],state.pages[i]]=[state.pages[i],state.pages[i+1]];state.current=i+1;renderAll();queueSave()});
+  document.querySelectorAll('.del').forEach(b=>b.onclick=e=>{e.stopPropagation();if(state.pages.length===1)return;pushUndo();let i=+b.dataset.i;state.pages.splice(i,1);if(state.current>=state.pages.length)state.current=state.pages.length-1;renderAll();queueSave()});
+}
+function renderThumbs(){
+  $('thumbs').innerHTML=state.pages.map((p,i)=>`<button class="thumb ${i===state.current?'active':''}" data-i="${i}"><div style="position:absolute;inset:0;transform:scale(.15);transform-origin:top left;width:666%;height:666%;pointer-events:none">${renderSlide({...p,image:p.image?{...p.image,selected:false}:p.image})}</div><span class="thumb-label">${i+1}</span></button>`).join('');
+  document.querySelectorAll('.thumb').forEach(t=>t.onclick=()=>{state.current=+t.dataset.i;renderAll()});
+}
+function renderEditor(){
+  const p=cur(); let h=`<label>레이아웃<select id="layoutSel">${layouts.map(([v,n])=>`<option value="${v}" ${p.layout===v?'selected':''}>${n}</option>`).join('')}</select></label>`;
+  if(p.layout==='korean-hero')h+=text('koreanTitle','한국어 큰 제목',p.koreanTitle)+range('titleSize','제목 크기',p.titleSize,40,220)+check('nowrapTitle','한 줄 유지',p.nowrapTitle);
+  if(p.layout==='definition-overlay')h+=text('koreanTitle','한국어 제목',p.koreanTitle)+text('englishTitle','영어/발음',p.englishTitle)+area('description','설명',p.description)+range('titleSize','제목 크기',p.titleSize,24,150)+range('bodySize','설명 크기',p.bodySize,14,90)+check('nowrapTitle','제목 한 줄 유지',p.nowrapTitle)+check('nowrapBody','설명 한 줄 유지',p.nowrapBody);
+  if(['split-left','split-right','top-title-image'].includes(p.layout))h+=text('title','제목',p.title)+area('details','설명',p.details)+range('titleSize','제목 크기',p.titleSize,20,150)+range('bodySize','설명 크기',p.bodySize,14,80)+check('nowrapTitle','제목 한 줄 유지',p.nowrapTitle)+check('nowrapBody','설명 한 줄 유지',p.nowrapBody)+imageControls();
+  if(p.layout==='ending')h+=area('copy','마무리 카피',p.copy)+area('handle','핸들/CTA',p.handle)+range('titleSize','카피 크기',p.titleSize,16,90)+range('bodySize','핸들 크기',p.bodySize,16,100)+check('nowrapTitle','카피 한 줄 유지',p.nowrapTitle)+check('nowrapBody','핸들 한 줄 유지',p.nowrapBody);
+  $('editor').innerHTML=h;bindEditor();
+}
+function text(id,l,v){return `<label>${l}<input type="text" id="${id}" value="${esc(v||'')}"></label>`}function area(id,l,v){return `<label>${l}<textarea id="${id}">${esc(v||'')}</textarea></label>`}function range(id,l,v,min,max){return `<div class="range-head"><span>${l}</span><span id="${id}Val">${v}</span></div><input type="range" id="${id}" min="${min}" max="${max}" step="1" value="${v}">`}function check(id,l,v){return `<label class="checkrow"><input type="checkbox" id="${id}" ${v?'checked':''}>${l}</label>`}
+function imageControls(){return `<label>이미지 업로드<input type="file" id="imageFile" accept="image/*"></label><div class="toolbar"><button id="fitImage" type="button">이미지 크게 맞춤</button><button id="centerImage" type="button">가운데</button><button id="removeImage" type="button">이미지 삭제</button></div><p class="hint">이미지를 클릭한 뒤 드래그하면 이동, 오른쪽 아래 검은 점을 잡으면 비율 확대/축소됩니다. Ctrl+Z로 되돌릴 수 있습니다.</p>`}
+function bindEditor(){
+  const p=cur(); $('layoutSel').onchange=e=>{pushUndo();const old=cur();const np=page(e.target.value);['koreanTitle','englishTitle','description','title','details','copy','handle','titleSize','bodySize','nowrapTitle','nowrapBody'].forEach(k=>{if(old[k]!=null&&np[k]!=null)np[k]=old[k]});if(old.image&&np.image)np.image={...old.image,id:old.image.id||uid()};state.pages[state.current]=np;renderAll();queueSave()};
+  ['koreanTitle','englishTitle','description','title','details','copy','handle'].forEach(k=>{const el=$(k);if(el)el.oninput=()=>{p[k]=el.value;renderCanvas();renderPages();renderThumbs();queueSave()}; if(el)el.onchange=()=>pushUndo()});
+  ['titleSize','bodySize'].forEach(k=>{const el=$(k);if(el)el.oninput=()=>{p[k]=+el.value;$(k+'Val').textContent=el.value;renderCanvas();renderThumbs();queueSave()}; if(el)el.onchange=()=>pushUndo()});
+  ['nowrapTitle','nowrapBody'].forEach(k=>{const el=$(k);if(el)el.onchange=()=>{pushUndo();p[k]=el.checked;renderCanvas();renderThumbs();queueSave()}});
+  const file=$('imageFile'); if(file&&p.image)file.onchange=e=>{const f=e.target.files?.[0];if(!f)return;pushUndo();const r=new FileReader();r.onload=()=>{p.image.src=r.result;p.image.x=0;p.image.y=0;p.image.w=360;p.image.h=360;p.image.scale=p.layout==='ending'||p.layout==='top-title-image'?1.55:1.25;p.image.selected=true;renderAll();queueSave()};r.readAsDataURL(f)};
+  const fit=$('fitImage');if(fit&&p.image)fit.onclick=()=>{pushUndo();p.image.w=420;p.image.h=420;p.image.scale=p.layout==='ending'||p.layout==='top-title-image'?1.75:1.35;p.image.x=0;p.image.y=0;p.image.selected=true;renderAll();queueSave()};
+  const cen=$('centerImage');if(cen&&p.image)cen.onclick=()=>{pushUndo();p.image.x=0;p.image.y=0;p.image.selected=true;renderAll();queueSave()};
+  const rem=$('removeImage');if(rem&&p.image)rem.onclick=()=>{pushUndo();p.image.src='';p.image.selected=false;renderAll();queueSave()};
+}
+function bindCanvas(){
+  const p=cur(); if(!p.image)return; const layer=document.querySelector('.image-layer'); if(!layer)return;
+  let raf=null;
+  const schedule=()=>{ if(raf) return; raf=requestAnimationFrame(()=>{raf=null;applyImageDom(p.image)}) };
+  layer.onpointerdown=e=>{
+    e.preventDefault();
+    if(e.target.dataset.handle)return;
+    pushUndo();
+    p.image.selected=true;
+    layer.classList.add('selected');
+    drag={type:'move',id:p.image.id,pid:e.pointerId,sx:e.clientX,sy:e.clientY,x:p.image.x,y:p.image.y};
+    layer.setPointerCapture(e.pointerId);
+  };
+  const handle=layer.querySelector('.resize-handle');
+  if(handle)handle.onpointerdown=e=>{
+    e.preventDefault();e.stopPropagation();
+    pushUndo();
+    p.image.selected=true;
+    layer.classList.add('selected');
+    drag={type:'resize',id:p.image.id,pid:e.pointerId,sx:e.clientX,sy:e.clientY,w:p.image.w,h:p.image.h||p.image.w};
+    layer.setPointerCapture(e.pointerId);
+  };
+  layer.onpointermove=e=>{
+    if(!drag||drag.pid!==e.pointerId)return;
+    const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;
+    if(drag.type==='move'){
+      p.image.x=Math.round(drag.x+dx);
+      p.image.y=Math.round(drag.y+dy);
+    }else{
+      p.image.w=Math.max(80,Math.round(drag.w+dx));
+      p.image.h=Math.max(80,Math.round(drag.h+dy));
+    }
+    schedule();
+  };
+  const end=e=>{if(!drag||e.pointerId!==drag.pid)return;drag=null;queueSave();renderThumbs()};
+  layer.onpointerup=end;layer.onpointercancel=end;
+  layer.onwheel=e=>{
+    e.preventDefault();pushUndo();p.image.selected=true;layer.classList.add('selected');
+    const factor=e.deltaY<0?1.04:.96;
+    p.image.w=Math.max(80,Math.round(p.image.w*factor));
+    p.image.h=Math.max(80,Math.round((p.image.h||p.image.w)*factor));
+    applyImageDom(p.image);queueSave();renderThumbs();
+  };
+  document.addEventListener('pointerdown',outsideOnce,{once:true,capture:true});
+}
+function outsideOnce(e){if(e.target.closest('.image-layer')||e.target.closest('.sidebar'))return;const p=cur();if(p.image&&p.image.selected){p.image.selected=false;renderCanvas();renderThumbs();queueSave()}}
+function applyImageDom(img){const el=document.querySelector(`[data-imgid="${img.id}"]`);if(el)el.setAttribute('style',imgStyle(img))}
+function renderAll(){renderPages();renderEditor();renderCanvas();renderThumbs();updateStatus()}
+$('addPage').onclick=()=>{pushUndo();state.pages.push(page('split-right'));state.current=state.pages.length-1;renderAll();queueSave()};
+$('duplicatePage').onclick=()=>{pushUndo();const c=JSON.parse(JSON.stringify(cur()));c.id=uid();if(c.image)c.image.id=uid();state.pages.splice(state.current+1,0,c);state.current++;renderAll();queueSave()};
+$('undoBtn').onclick=undo;$('redoBtn').onclick=redo;
+$('resetAll').onclick=()=>{if(!confirm('전체 초기화할까요?'))return;pushUndo();state=defaultState();renderAll();saveNow()};
+$('downloadPng').onclick=()=>alert('PNG 저장은 다음 단계에서 안정화하겠습니다. 지금 버전은 이미지/텍스트 직접 편집 안정화가 우선입니다.');
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo()} if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();redo()}});
+renderAll();saveNow();
+</script>
+</body>
+</html>
