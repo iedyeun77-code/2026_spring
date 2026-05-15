@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rehearsal Blocking Snapshot Notebook</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      color: #222;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      min-height: 100vh;
+    }
+
+    .panel {
+      background: white;
+      padding: 16px;
+      border-right: 1px solid #ddd;
+      overflow-y: auto;
+    }
+
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    h2 {
+      font-size: 15px;
+      margin: 18px 0 8px;
+      padding-top: 12px;
+      border-top: 1px solid #eee;
+    }
+
+    p, label, .hint {
+      font-size: 13px;
+      line-height: 1.45;
+      color: #555;
+    }
+
+    input, button, textarea { font-family: inherit; }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="color"],
+    input[type="file"],
+    textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin: 4px 0 8px;
+      font-size: 13px;
+    }
+
+    textarea { resize: vertical; min-height: 54px; }
+
+    button {
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px 12px;
+      border: 0;
+      border-radius: 8px;
+      background: #222;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button.secondary { background: #666; }
+    button.danger { background: #9d2b2b; }
+    button.small {
+      width: auto;
+      padding: 6px 8px;
+      font-size: 12px;
+      margin: 2px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .actor-list,
+    .cue-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .actor-card,
+    .cue-card {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 8px;
+      background: #fafafa;
+      font-size: 13px;
+    }
+
+    .cue-card.active {
+      outline: 3px solid rgba(0,0,0,0.18);
+      background: #fff;
+    }
+
+    .actor-head,
+    .cue-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .badge {
+      display: inline-flex;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      color: white;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      margin-right: 6px;
+      border: 2px solid white;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    }
+
+    .stage-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      gap: 12px;
+    }
+
+    .current-note {
+      width: min(920px, 90vw);
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 12px 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .current-time {
+      font-size: 24px;
+      font-weight: bold;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .current-title {
+      margin-top: 4px;
+      font-size: 15px;
+      font-weight: bold;
+    }
+
+    .current-lyric {
+      margin-top: 4px;
+      font-size: 13px;
+      color: #555;
+    }
+
+    .stage {
+      position: relative;
+      width: min(920px, 90vw);
+      aspect-ratio: 16 / 10;
+      background: #fafafa;
+      border: 4px solid #222;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      touch-action: none;
+    }
+
+    .actor {
+      position: absolute;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      border: 3px solid white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      transform: translate(-50%, -50%);
+      z-index: 10;
+      user-select: none;
+      cursor: grab;
+    }
+
+    .actor:active { cursor: grabbing; }
+
+    .timebar {
+      width: min(920px, 90vw);
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type="range"] { flex: 1; }
+
+    .time-display {
+      width: 74px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: bold;
+    }
+
+    .timeline-marks {
+      position: relative;
+      height: 34px;
+      margin-top: 8px;
+      border-top: 1px solid #ddd;
+    }
+
+    .marker {
+      position: absolute;
+      top: -6px;
+      transform: translateX(-50%);
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #222;
+      cursor: pointer;
+    }
+
+    .marker-label {
+      position: absolute;
+      top: 10px;
+      transform: translateX(-50%);
+      font-size: 11px;
+      white-space: nowrap;
+      color: #555;
+    }
+
+    .help-box {
+      width: min(920px, 90vw);
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel">
+      <h1>Rehearsal Blocking Snapshot Notebook</h1>
+      <p>가사·큐 문장을 기준으로, ‘이 순간 배우들이 어디에 있어야 하는가’를 rehearsal notebook처럼 저장합니다.</p>
+
+      <h2>1. 무대 디자인</h2>
+      <label>무대 평면도 이미지 업로드</label>
+      <input id="stageImageInput" type="file" accept="image/*" />
+      <button class="secondary" id="clearStageBtn">배경 이미지 제거</button>
+
+      <h2>2. 배우</h2>
+      <label>배우 이름</label>
+      <input id="actorName" type="text" placeholder="예: Michael" />
+      <div class="row">
+        <div>
+          <label>표시 글자</label>
+          <input id="actorInitial" type="text" maxlength="2" placeholder="M" />
+        </div>
+        <div>
+          <label>색</label>
+          <input id="actorColor" type="color" value="#2f5fd0" />
+        </div>
+      </div>
+      <button id="addActorBtn">배우 추가</button>
+      <div id="actorList" class="actor-list"></div>
+
+      <h2>3. 가사 / 큐 기준 Blocking</h2>
+      <div class="row">
+        <div>
+          <label>분</label>
+          <input id="cueMin" type="number" min="0" value="0" />
+        </div>
+        <div>
+          <label>초</label>
+          <input id="cueSec" type="number" min="0" max="59" value="0" />
+        </div>
+      </div>
+      <label>넘버 / 장면 이름 \(선택\)</label>
+      <input id="cueTitle" type="text" placeholder="예: Opening Number" />
+      <label>대표 가사 / 큐 문장</label>
+      <textarea id="cueLyric" placeholder="예: ‘I dreamed a dream in time gone by’ / 조명 전환 직후"></textarea>
+      <button id="addCueBtn">현재 가사 / 큐 저장</button>
+      <div class="row">
+        <button class="secondary" id="prevCueBtn">이전 Cue</button>
+        <button class="secondary" id="nextCueBtn">다음 Cue</button>
+      </div>
+      <div class="row">
+        <button class="secondary" id="undoBtn">되돌리기</button>
+        <button class="secondary" id="redoBtn">다시 적용</button>
+      </div>
+      <button class="secondary" id="savePositionsBtn">현재 Blocking 저장</button>
+      <button class="danger" id="deleteCueBtn">현재 시간 지점 삭제</button>
+      <div id="cueList" class="cue-list"></div>
+
+      <h2>4. 저장 / 내보내기</h2>
+      <button id="exportImageBtn">현재 화면 이미지 저장</button>
+      <button class="secondary" id="saveProjectBtn">프로젝트 저장</button>
+      <button class="secondary" id="loadProjectBtn">저장본 불러오기</button>
+      <button class="danger" id="resetProjectBtn">전체 초기화</button>
+    </aside>
+
+    <main class="stage-wrap">
+      <div class="current-note">
+        <div id="currentLyric" class="current-time">배우를 드래그해서 현재 시점의 배치를 저장하세요.</div>
+        <div id="currentTitle" class="current-title">시작 위치</div>
+        <div id="currentTime" class="current-lyric">00:00</div>
+      </div>
+
+      <div id="stage" class="stage"></div>
+
+      <div class="timebar">
+        <div class="slider-row">
+          <input id="timeSlider" type="range" min="0" max="180" value="0" step="1" />
+          <div id="timeDisplay" class="time-display">00:00</div>
+        </div>
+        <div id="timelineMarks" class="timeline-marks"></div>
+      </div>
+
+      <div class="help-box">
+        사용법: 가사/큐 문장을 입력 → cue 저장 → 배우들을 드래그해서 배치 → 현재 배우 배치 저장. 이 버전은 rehearsal notebook처럼 ‘이 가사에서 어디에 서 있어야 하는가’를 기록합니다.
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let project = {
+      duration: 180,
+      stageImage: "",
+      actors: [],
+      cues: [
+        {
+          time: 0,
+          title: "시작 위치",
+          lyric: "배우를 추가한 뒤 이 시점의 배치를 저장하세요.",
+          positions: {}
+        }
+      ]
+    };
+
+    let currentTime = 0;
+    let draggingActorId = null;
+    let historyStack = [];
+    let redoStack = [];
+
+    const stage = document.getElementById("stage");
+    const actorList = document.getElementById("actorList");
+    const cueList = document.getElementById("cueList");
+    const timeSlider = document.getElementById("timeSlider");
+    const timeDisplay = document.getElementById("timeDisplay");
+    const currentTimeEl = document.getElementById("currentTime");
+    const currentTitle = document.getElementById("currentTitle");
+    const currentLyric = document.getElementById("currentLyric");
+    const timelineMarks = document.getElementById("timelineMarks");
+    const stageImageInput = document.getElementById("stageImageInput");
+
+    document.getElementById("clearStageBtn").addEventListener("click", clearStageImage);
+    document.getElementById("addActorBtn").addEventListener("click", addActor);
+    document.getElementById("addCueBtn").addEventListener("click", addOrUpdateCue);
+    document.getElementById("savePositionsBtn").addEventListener("click", saveCurrentPositions);
+    document.getElementById("undoBtn").addEventListener("click", undoAction);
+    document.getElementById("redoBtn").addEventListener("click", redoAction);
+    document.getElementById("prevCueBtn").addEventListener("click", goToPreviousCue);
+    document.getElementById("nextCueBtn").addEventListener("click", goToNextCue);
+    document.getElementById("deleteCueBtn").addEventListener("click", deleteCurrentCue);
+    document.getElementById("exportImageBtn").addEventListener("click", exportCurrentSnapshot);
+    document.getElementById("saveProjectBtn").addEventListener("click", saveProject);
+    document.getElementById("loadProjectBtn").addEventListener("click", loadProject);
+    document.getElementById("resetProjectBtn").addEventListener("click", resetProject);
+
+    timeSlider.addEventListener("input", () => goToTime(Number(timeSlider.value)));
+
+    stageImageInput.addEventListener("change", function () {
+      const file = this.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        project.stageImage = e.target.result;
+        saveStateAndRender();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    document.addEventListener("pointermove", dragActor);
+    document.addEventListener("pointerup", stopDrag);
+
+    saveStateAndRender();
+
+    function formatTime(seconds) {
+      const total = Math.max(0, Math.floor(seconds));
+      const min = Math.floor(total / 60);
+      const sec = total % 60;
+      return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+    }
+
+    function readCueTimeInput() {
+      const min = Math.max(0, Number(document.getElementById("cueMin").value) || 0);
+      const sec = Math.max(0, Math.min(59, Number(document.getElementById("cueSec").value) || 0));
+      return min * 60 + sec;
+    }
+
+    function fillCueTimeInput(time) {
+      document.getElementById("cueMin").value = Math.floor(time / 60);
+      document.getElementById("cueSec").value = Math.floor(time % 60);
+    }
+
+    function render() {
+      stage.querySelectorAll(".actor").forEach(el => el.remove());
+      stage.style.backgroundImage = project.stageImage ? `url(${project.stageImage})` : "";
+
+      ensureCuePositions();
+      project.cues.sort((a, b) => a.time - b.time);
+      syncTimelineDuration();
+      timeSlider.max = project.duration;
+      renderActorList();
+      renderActors();
+      renderCueList();
+      renderTimelineMarks();
+      updateStageToCurrentCue();
+    }
+
+    function ensureCuePositions() {
+      project.cues.forEach(cue => {
+        if (!cue.positions) cue.positions = {};
+        project.actors.forEach((actor, index) => {
+          if (!cue.positions[actor.id]) {
+            cue.positions[actor.id] = { x: 20 + index * 12, y: 70 };
+          }
+        });
+        Object.keys(cue.positions).forEach(actorId => {
+          if (!project.actors.some(actor => actor.id === actorId)) delete cue.positions[actorId];
+        });
+      });
+    }
+
+    function syncTimelineDuration() {
+      const lastCueTime = project.cues.length ? Math.max(...project.cues.map(cue => cue.time)) : 0;
+      project.duration = Math.max(60, lastCueTime + 10);
+    }
+
+    function renderActorList() {
+      actorList.innerHTML = "";
+      project.actors.forEach(actor => {
+        const card = document.createElement("div");
+        card.className = "actor-card";
+
+        const head = document.createElement("div");
+        head.className = "actor-head";
+
+        const name = document.createElement("div");
+        const badge = document.createElement("span");
+        badge.className = "badge";
+        badge.style.background = actor.color;
+        badge.textContent = actor.initial;
+        name.appendChild(badge);
+        name.appendChild(document.createTextNode(actor.name));
+
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "small danger";
+        deleteButton.type = "button";
+        deleteButton.textContent = "삭제";
+        deleteButton.addEventListener("click", () => removeActor(actor.id));
+
+        head.appendChild(name);
+        head.appendChild(deleteButton);
+        card.appendChild(head);
+        actorList.appendChild(card);
+      });
+    }
+
+    function renderActors() {
+      project.actors.forEach(actor => {
+        const el = document.createElement("div");
+        el.className = "actor";
+        el.id = `actor-${actor.id}`;
+        el.textContent = actor.initial;
+        el.style.background = actor.color;
+        el.title = actor.name;
+        el.addEventListener("pointerdown", event => startDrag(event, actor.id));
+        stage.appendChild(el);
+      });
+    }
+
+    function renderCueList() {
+      cueList.innerHTML = "";
+      const active = getCurrentCue();
+      project.cues.forEach(cue => {
+        const card = document.createElement("div");
+        card.className = "cue-card" + (active && active.time === cue.time ? " active" : "");
+
+        const head = document.createElement("div");
+        head.className = "cue-head";
+
+        const time = document.createElement("div");
+        time.className = "hint";
+        time.textContent = formatTime(cue.time);
+
+        const moveButton = document.createElement("button");
+        moveButton.className = "small";
+        moveButton.type = "button";
+        moveButton.textContent = "이동";
+        moveButton.addEventListener("click", () => goToCue(cue.time));
+
+        head.appendChild(time);
+        head.appendChild(moveButton);
+
+        const title = document.createElement("div");
+        title.style.fontWeight = "bold";
+        title.textContent = cue.lyric || "(가사/큐 미입력)";
+
+        const lyric = document.createElement("div");
+        lyric.className = "hint";
+        lyric.textContent = `${cue.title || "Untitled"} · ${formatTime(cue.time)}`;
+
+        card.appendChild(head);
+        card.appendChild(title);
+        card.appendChild(lyric);
+        cueList.appendChild(card);
+      });
+    }
+
+    function renderTimelineMarks() {
+      timelineMarks.innerHTML = "";
+      project.cues.forEach(cue => {
+        const percent = project.duration ? (cue.time / project.duration) * 100 : 0;
+        const marker = document.createElement("div");
+        marker.className = "marker";
+        marker.style.left = `${percent}%`;
+        marker.title = `${formatTime(cue.time)} ${cue.title || ""}`;
+        marker.addEventListener("click", () => goToCue(cue.time));
+        timelineMarks.appendChild(marker);
+
+        const label = document.createElement("div");
+        label.className = "marker-label";
+        label.style.left = `${percent}%`;
+        label.textContent = formatTime(cue.time);
+        timelineMarks.appendChild(label);
+      });
+    }
+
+    function pushHistory() {
+      historyStack.push(JSON.stringify(project));
+      if (historyStack.length > 50) historyStack.shift();
+      redoStack = [];
+    }
+
+    function undoAction() {
+      if (historyStack.length <= 1) return;
+
+      const currentState = historyStack.pop();
+      redoStack.push(currentState);
+
+      const previousState = historyStack[historyStack.length - 1];
+      project = JSON.parse(previousState);
+      currentTime = project.cues[0]?.time || 0;
+      render();
+    }
+
+    function redoAction() {
+      if (redoStack.length === 0) return;
+
+      const nextState = redoStack.pop();
+      historyStack.push(nextState);
+      project = JSON.parse(nextState);
+      currentTime = project.cues[0]?.time || 0;
+      render();
+    }
+
+    function saveStateAndRender() {
+      pushHistory();
+      render();
+    }
+
+    function addActor() {
+      const nameInput = document.getElementById("actorName");
+      const initialInput = document.getElementById("actorInitial");
+      const colorInput = document.getElementById("actorColor");
+
+      const name = nameInput.value.trim() || `Actor ${project.actors.length + 1}`;
+      const initial = (initialInput.value.trim() || name[0] || "A").slice(0, 2).toUpperCase();
+      const color = colorInput.value;
+      const id = "a" + Date.now();
+
+      project.actors.push({ id, name, initial, color });
+      project.cues.forEach(cue => {
+        cue.positions[id] = { x: 50, y: 50 };
+      });
+
+      nameInput.value = "";
+      initialInput.value = "";
+      saveStateAndRender();
+    }
+
+    function removeActor(id) {
+      project.actors = project.actors.filter(item => item.id !== id);
+      project.cues.forEach(cue => {
+        if (cue.positions) delete cue.positions[id];
+      });
+      saveStateAndRender();
+    }
+
+    function addOrUpdateCue() {
+      const time = readCueTimeInput();
+      const title = document.getElementById("cueTitle").value.trim();
+      const lyric = document.getElementById("cueLyric").value.trim();
+      const positions = getCurrentPositions();
+
+      let cue = project.cues.find(c => c.time === time);
+      if (!cue) {
+        cue = { time, title, lyric, positions };
+        project.cues.push(cue);
+      } else {
+        cue.title = title;
+        cue.lyric = lyric;
+        cue.positions = positions;
+      }
+
+      if (time > project.duration) project.duration = time;
+      currentTime = time;
+      saveStateAndRender();
+    }
+
+    function saveCurrentPositions() {
+      let cue = getCurrentCue();
+      if (!cue) {
+        cue = { time: currentTime, title: "", lyric: "", positions: {} };
+        project.cues.push(cue);
+      }
+      cue.positions = getCurrentPositions();
+      saveStateAndRender();
+    }
+
+    function deleteCurrentCue() {
+      const cue = getCurrentCue();
+      if (!cue) return;
+      if (!confirm(`${formatTime(cue.time)} 시간 지점을 삭제할까요?`)) return;
+
+      project.cues = project.cues.filter(c => c !== cue);
+      if (project.cues.length === 0) {
+        project.cues.push({ time: 0, title: "시작 위치", lyric: "", positions: defaultPositions() });
+      }
+      currentTime = project.cues[0].time;
+      saveStateAndRender();
+    }
+
+    function goToCue(time) {
+      currentTime = time;
+      fillCueTimeInput(time);
+      const cue = project.cues.find(c => c.time === time);
+      if (cue) {
+        document.getElementById("cueTitle").value = cue.title || "";
+        document.getElementById("cueLyric").value = cue.lyric || "";
+      }
+      render();
+    }
+
+    function goToTime(time) {
+      const cue = project.cues.find(c => c.time === time);
+      if (cue) {
+        goToCue(time);
+        return;
+      }
+      currentTime = time;
+      updateStageToCurrentCue();
+      renderCueList();
+    }
+
+    function getCurrentCue() {
+      return project.cues.find(cue => cue.time === currentTime) || nearestCue(currentTime);
+    }
+
+    function nearestCue(time) {
+      if (project.cues.length === 0) return null;
+      return [...project.cues].sort((a, b) => Math.abs(a.time - time) - Math.abs(b.time - time))[0];
+    }
+
+    function goToPreviousCue() {
+      const sorted = [...project.cues].sort((a, b) => a.time - b.time);
+      const currentIndex = sorted.findIndex(cue => cue.time === getCurrentCue()?.time);
+      if (currentIndex > 0) {
+        goToCue(sorted[currentIndex - 1].time);
+      }
+    }
+
+    function goToNextCue() {
+      const sorted = [...project.cues].sort((a, b) => a.time - b.time);
+      const currentIndex = sorted.findIndex(cue => cue.time === getCurrentCue()?.time);
+      if (currentIndex < sorted.length - 1) {
+        goToCue(sorted[currentIndex + 1].time);
+      }
+    }
+
+    function defaultPositions() {
+      const positions = {};
+      project.actors.forEach((actor, index) => {
+        positions[actor.id] = { x: 20 + index * 12, y: 70 };
+      });
+      return positions;
+    }
+
+    function getCurrentPositions() {
+      const positions = {};
+      project.actors.forEach(actor => {
+        const el = document.getElementById(`actor-${actor.id}`);
+        positions[actor.id] = {
+          x: Number(el?.dataset.x || 50),
+          y: Number(el?.dataset.y || 50)
+        };
+      });
+      return positions;
+    }
+
+    function updateStageToCurrentCue() {
+      const cue = getCurrentCue();
+      if (!cue) return;
+
+      currentTimeEl.textContent = formatTime(currentTime);
+      timeDisplay.textContent = formatTime(currentTime);
+      timeSlider.value = currentTime;
+      currentLyric.textContent = cue.lyric || "(가사/큐 미입력)";
+      currentTitle.textContent = cue.title || "Untitled Cue";
+
+      project.actors.forEach(actor => {
+        const el = document.getElementById(`actor-${actor.id}`);
+        const pos = cue.positions?.[actor.id] || { x: 50, y: 50 };
+        if (!el) return;
+        el.style.left = `${pos.x}%`;
+        el.style.top = `${pos.y}%`;
+        el.dataset.x = pos.x;
+        el.dataset.y = pos.y;
+      });
+    }
+
+    function startDrag(event, actorId) {
+      draggingActorId = actorId;
+      event.preventDefault();
+    }
+
+    function dragActor(event) {
+      if (!draggingActorId) return;
+      const rect = stage.getBoundingClientRect();
+      let x = ((event.clientX - rect.left) / rect.width) * 100;
+      let y = ((event.clientY - rect.top) / rect.height) * 100;
+      x = Math.max(0, Math.min(100, x));
+      y = Math.max(0, Math.min(100, y));
+
+      const el = document.getElementById(`actor-${draggingActorId}`);
+      if (!el) return;
+      el.style.left = `${x}%`;
+      el.style.top = `${y}%`;
+      el.dataset.x = x;
+      el.dataset.y = y;
+    }
+
+    function stopDrag() {
+      draggingActorId = null;
+    }
+
+    function clearStageImage() {
+      pushHistory();
+      project.stageImage = "";
+      stageImageInput.value = "";
+      render();
+    }
+
+    function exportCurrentSnapshot() {
+      const cue = getCurrentCue();
+      const stageRect = stage.getBoundingClientRect();
+      const scale = 2;
+      const noteHeight = 115;
+      const padding = 24;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(stageRect.width * scale);
+      canvas.height = Math.round((noteHeight + stageRect.height + padding) * scale);
+      const ctx = canvas.getContext("2d");
+      ctx.scale(scale, scale);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width / scale, canvas.height / scale);
+
+      ctx.fillStyle = "#222222";
+      ctx.font = "bold 26px Arial";
+      ctx.fillText(formatTime(currentTime), 16, 34);
+
+      ctx.font = "bold 16px Arial";
+      ctx.fillText(cue?.title || "", 16, 62);
+
+      ctx.fillStyle = "#555555";
+      ctx.font = "13px Arial";
+      wrapText(ctx, cue?.lyric || "", 16, 86, stageRect.width - 32, 18);
+
+      const stageY = noteHeight;
+      ctx.fillStyle = "#fafafa";
+      roundRect(ctx, 0, stageY, stageRect.width, stageRect.height, 14, true, false);
+
+      const drawActors = () => {
+        ctx.strokeStyle = "#222222";
+        ctx.lineWidth = 4;
+        roundRect(ctx, 0, stageY, stageRect.width, stageRect.height, 14, false, true);
+
+        project.actors.forEach(actor => {
+          const pos = cue?.positions?.[actor.id] || { x: 50, y: 50 };
+          const x = (pos.x / 100) * stageRect.width;
+          const y = stageY + (pos.y / 100) * stageRect.height;
+
+          ctx.beginPath();
+          ctx.arc(x, y, 21, 0, Math.PI * 2);
+          ctx.fillStyle = actor.color;
+          ctx.fill();
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = "#ffffff";
+          ctx.stroke();
+
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "bold 15px Arial";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(actor.initial, x, y);
+          ctx.textAlign = "left";
+          ctx.textBaseline = "alphabetic";
+        });
+
+        downloadCanvas(canvas, `blocking_${formatTime(currentTime).replace(":", "-")}.png`);
+      };
+
+      if (project.stageImage) {
+        const img = new Image();
+        img.onload = () => {
+          drawContainedImage(ctx, img, 0, stageY, stageRect.width, stageRect.height);
+          drawActors();
+        };
+        img.src = project.stageImage;
+      } else {
+        drawActors();
+      }
+    }
+
+    function drawContainedImage(ctx, img, x, y, w, h) {
+      const ratio = Math.min(w / img.width, h / img.height);
+      const dw = img.width * ratio;
+      const dh = img.height * ratio;
+      const dx = x + (w - dw) / 2;
+      const dy = y + (h - dh) / 2;
+      ctx.drawImage(img, dx, dy, dw, dh);
+    }
+
+    function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      if (fill) ctx.fill();
+      if (stroke) ctx.stroke();
+    }
+
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+      const words = String(text).split(" ");
+      let line = "";
+      for (let i = 0; i < words.length; i++) {
+        const testLine = line + words[i] + " ";
+        if (ctx.measureText(testLine).width > maxWidth && i > 0) {
+          ctx.fillText(line, x, y);
+          line = words[i] + " ";
+          y += lineHeight;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line, x, y);
+    }
+
+    function downloadCanvas(canvas, filename) {
+      const link = document.createElement("a");
+      link.download = filename;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    function saveProject() {
+      localStorage.setItem("rehearsalBlockingSnapshotNotebook", JSON.stringify(project));
+      alert("현재 프로젝트를 이 브라우저에 저장했습니다.");
+    }
+
+    function loadProject() {
+      const saved = localStorage.getItem("rehearsalBlockingSnapshotNotebook");
+      if (!saved) {
+        alert("저장된 프로젝트가 없습니다.");
+        return;
+      }
+      project = JSON.parse(saved);
+      currentTime = project.cues[0]?.time || 0;
+      historyStack = [JSON.stringify(project)];
+      redoStack = [];
+      render();
+    }
+
+    function resetProject() {
+      localStorage.removeItem("rehearsalBlockingSnapshotNotebook");
+      project = {
+        duration: 180,
+        stageImage: "",
+        actors: [],
+        cues: [
+          {
+            time: 0,
+            title: "시작 위치",
+            lyric: "배우를 추가한 뒤 이 시점의 배치를 저장하세요.",
+            positions: {}
+          }
+        ]
+      };
+      currentTime = 0;
+      historyStack = [JSON.stringify(project)];
+      redoStack = [];
+      render();
+    }
+  </script>
+</body>
+</html>
