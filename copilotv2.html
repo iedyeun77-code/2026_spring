@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice Creative Copilot</title>
+
+<style>
+body{
+    font-family:sans-serif;
+    background:#f5f5f5;
+    margin:0;
+    padding:40px;
+}
+
+.container{
+    max-width:1000px;
+    margin:auto;
+}
+
+.card{
+    background:white;
+    border-radius:16px;
+    padding:24px;
+    margin-bottom:20px;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+h1{
+    margin-top:0;
+}
+
+textarea{
+    width:100%;
+    min-height:150px;
+    padding:12px;
+    font-size:16px;
+}
+
+.buttons{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:15px;
+}
+
+.type-btn{
+    padding:10px 18px;
+    border:1px solid #ddd;
+    background:white;
+    cursor:pointer;
+    border-radius:8px;
+}
+
+.type-btn.active{
+    background:#111;
+    color:white;
+}
+
+button{
+    padding:12px 20px;
+    border:none;
+    background:#111;
+    color:white;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+.section-title{
+    font-weight:bold;
+    margin-bottom:10px;
+}
+
+.output-box{
+    white-space:pre-wrap;
+    line-height:1.7;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<div class="card">
+
+<h1>🎤 Voice Creative Copilot</h1>
+
+<p>
+아이디어를 자유롭게 말하세요.
+AI가 콘텐츠 형식에 맞게 기획안을 생성합니다.
+</p>
+
+<button id="recordBtn">
+🎙 녹음 시작
+</button>
+
+<br><br>
+
+<textarea id="ideaInput"
+placeholder="여기에 음성 내용이 들어갑니다."></textarea>
+
+<div class="buttons">
+
+<button class="type-btn active"
+data-type="웹툰">
+웹툰
+</button>
+
+<button class="type-btn"
+data-type="카드뉴스">
+카드뉴스
+</button>
+
+<button class="type-btn"
+data-type="숏폼영상">
+숏폼 영상
+</button>
+
+<button class="type-btn"
+data-type="롱폼영상">
+롱폼 영상
+</button>
+
+<button class="type-btn"
+data-type="이미지">
+이미지
+</button>
+
+</div>
+
+<br>
+
+<button id="generateBtn">
+✨ 생성하기
+</button>
+
+</div>
+
+<div class="card">
+
+<div class="section-title">
+📌 분석 결과
+</div>
+
+<div id="analysis"
+class="output-box">
+아직 생성되지 않았습니다.
+</div>
+
+</div>
+
+<div class="card">
+
+<div class="section-title">
+📖 콘텐츠 기획안
+</div>
+
+<div id="storyboard"
+class="output-box">
+아직 생성되지 않았습니다.
+</div>
+
+</div>
+
+<div class="card">
+
+<div class="section-title">
+🛠 추천 AI 툴
+</div>
+
+<div id="tools"
+class="output-box">
+아직 생성되지 않았습니다.
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const OPENROUTER_API_KEY = "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";
+
+document.getElementById("generateBtn")
+.addEventListener("click", async ()=>{
+
+const idea =
+document.getElementById("ideaInput").value;
+
+if(!idea){
+alert("아이디어 입력");
+return;
+}
+
+document.getElementById("analysis").innerText =
+"AI 분석 중...";
+
+try{
+
+const response = await fetch(
+"https://openrouter.ai/api/v1/chat/completions",
+{
+method:"POST",
+headers:{
+"Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+"Content-Type":"application/json"
+},
+body: JSON.stringify({
+  model: "deepseek/deepseek-chat-v3-0324",
+  messages: [
+    {
+      role: "user",
+      content: `
+다음 아이디어를 분석해서 아래 형식으로 답해줘:
+
+[분석]
+- 핵심 아이디어 요약
+- 타겟 분석
+- 콘텐츠 방향
+
+[콘텐츠 기획안]
+- 구조
+- 장면/컷 구성
+- 흐름
+
+[추천 AI 툴]
+- 어떤 툴을 왜 쓰는지
+
+아이디어:
+${idea}
+`
+    }
+  ]
+})
+);
+
+const data = await response.json();
+
+const result = data.choices?.[0]?.message?.content || "";
+const analysis = result.split("[콘텐츠 기획안]")[0];
+const storyboard = result
+  .split("[콘텐츠 기획안]")[1]
+  ?.split("[추천 AI 툴]")[0];
+const tools = result.split("[추천 AI 툴]")[1];
+document.getElementById("analysis").innerText = analysis?.trim();
+document.getElementById("storyboard").innerText = storyboard?.trim();
+document.getElementById("tools").innerText = tools?.trim();
+
+
+}
+catch(err){
+
+document.getElementById("analysis").innerText =
+err.message;
+
+}
+
+});
+
+const recordBtn = document.getElementById("recordBtn");
+const ideaInput = document.getElementById("ideaInput");
+
+const SpeechRecognition =
+  window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SpeechRecognition) {
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "ko-KR";
+  recognition.interimResults = false;
+
+  recordBtn.addEventListener("click", () => {
+    recognition.start();
+    recordBtn.innerText = "🎙 듣는 중...";
+  });
+
+  recognition.addEventListener("result", (event) => {
+    const text = event.results[0][0].transcript;
+    ideaInput.value += text;
+  });
+
+  recognition.addEventListener("end", () => {
+    recordBtn.innerText = "🎙 녹음 시작";
+  });
+
+} else {
+  recordBtn.innerText = "녹음 지원 안됨";
+}
+
+</script>
+</body>
+</html>
