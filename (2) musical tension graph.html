@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Musical Tension Graph Builder</title>
+  <style>
+    :root {
+      --bg: #f5f5f5;
+      --panel: #ffffff;
+      --line: #1f3fff;
+      --border: #cfcfcf;
+      --text: #111111;
+      --muted: #666666;
+      --soft: #efefef;
+      --danger: #b42318;
+      --accent: #111111;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .preview-wrap {
+      padding: 20px;
+      overflow: auto;
+    }
+
+    h1 { font-size: 22px; margin: 0 0 8px; }
+    .sub {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 16px;
+      background: #fff;
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 16px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+    label { font-size: 12px; color: var(--muted); }
+
+    input, select, textarea, button { font: inherit; }
+    input, select, textarea {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 10px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    button {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 9px 12px;
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    button.danger { color: var(--danger); }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 6px;
+      text-align: center;
+      font-size: 12px;
+      vertical-align: middle;
+    }
+
+    th {
+      background: var(--soft);
+      font-weight: 600;
+    }
+
+    td input, td select {
+      width: 100%;
+      padding: 7px 6px;
+      font-size: 12px;
+      border-radius: 8px;
+    }
+
+    .row-actions { width: 60px; }
+    .row-actions button { width: 100%; padding: 7px 0; }
+
+    .checkboxes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 12px;
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .check input { width: 16px; height: 16px; }
+
+    .preview-shell {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px;
+      min-width: 1100px;
+      width: fit-content;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+    }
+
+    .preview-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .preview-title {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .note {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 8px;
+    }
+
+    .warn {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #9a3412;
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: pre-line;
+    }
+
+    .status {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: pre-line;
+    }
+
+    canvas {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    @media (max-width: 1180px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+      .preview-shell { min-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h1>Musical Tension Graph Builder</h1>
+      <p class="sub">각 넘버 안에서는 시간을 00:00부터 다시 입력하고, 그래프는 전체 흐름으로 자동 연결됩니다. 시간 값은 내부 좌표 계산에만 쓰고 화면에는 표시하지 않습니다.</p>
+
+      <section class="panel">
+        <h2>1. 기본 정보</h2>
+        <div class="field-grid">
+          <div class="field full">
+            <label for="title">그래프 제목</label>
+            <input id="title" value="Musical Tension Graph" />
+          </div>
+          <div class="field">
+            <label for="yMax">Y축 최대값</label>
+            <input id="yMax" type="number" min="5" max="20" value="10" />
+          </div>
+          <div class="field">
+            <label for="lineColor">그래프 선 색상</label>
+            <input id="lineColor" type="color" value="#1f3fff" />
+          </div>
+          <div class="field">
+            <label for="canvasWidth">캔버스 너비</label>
+            <input id="canvasWidth" type="number" min="1000" max="2600" value="1700" />
+          </div>
+          <div class="field">
+            <label for="canvasHeight">캔버스 높이</label>
+            <input id="canvasHeight" type="number" min="560" max="1400" value="760" />
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>2. 넘버 설정</h2>
+        <table id="numbersTable">
+          <thead>
+            <tr>
+              <th>Number</th>
+              <th>Label</th>
+              <th>Duration</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="btn-row">
+          <button type="button" id="addNumberBtn">+ 넘버 추가</button>
+        </div>
+        <div class="note">Duration은 mm:ss 형식입니다. 예: 02:30</div>
+      </section>
+
+      <section class="panel">
+        <h2>3. 비트 데이터</h2>
+        <table id="beatsTable">
+          <thead>
+            <tr>
+              <th>Number</th>
+              <th>Beat</th>
+              <th>Time</th>
+              <th>Tension</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="btn-row">
+          <button type="button" id="addBeatBtn">+ 비트 추가</button>
+          <button type="button" id="sortBeatBtn">정렬</button>
+        </div>
+        <div class="note">Time도 mm:ss 형식입니다. 각 넘버 안에서만 00:00부터 다시 쓰면 됩니다.</div>
+      </section>
+
+      <section class="panel">
+        <h2>4. 표시 옵션</h2>
+        <div class="checkboxes">
+          <label class="check"><input type="checkbox" id="showMarkers" checked /> 점 표시</label>
+          <label class="check"><input type="checkbox" id="showNumberLines" checked /> 넘버 경계 점선</label>
+          <label class="check"><input type="checkbox" id="showBottomBox" checked /> 하단 표 테두리</label>
+          <label class="check"><input type="checkbox" id="showBeatLabels" checked /> Beat 표시</label>
+          <label class="check"><input type="checkbox" id="showNumberLabels" checked /> 넘버 제목 표시</label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>5. 저장 / 복구 / 내보내기</h2>
+        <div class="btn-row">
+          <button type="button" class="primary" id="downloadBtn">PNG 다운로드</button>
+          <button type="button" id="restoreBtn">이전 작업 복구</button>
+          <button type="button" id="saveNowBtn">지금 저장</button>
+          <button type="button" id="loadSampleBtn">샘플 다시 불러오기</button>
+        </div>
+        <div id="statusBox" class="status">자동 저장 대기 중</div>
+        <div id="warningBox" class="warn" style="display:none;"></div>
+      </section>
+    </aside>
+
+    <main class="preview-wrap">
+      <div class="preview-shell">
+        <div class="preview-head">
+          <div class="preview-title">실시간 미리보기</div>
+        </div>
+        <canvas id="graphCanvas" width="1700" height="760"></canvas>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const STORAGE_KEY_CURRENT = 'musical_tension_graph_current_v2';
+    const STORAGE_KEY_BACKUP = 'musical_tension_graph_backup_v2';
+    const STORAGE_KEY_SNAPSHOT_BEFORE_SAMPLE = 'musical_tension_graph_before_sample_v2';
+
+    const sampleNumbers = [
+      { number: 1, label: 'Number 1', duration: '02:30' },
+      { number: 2, label: 'Number 2', duration: '01:50' },
+      { number: 3, label: 'Number 3', duration: '03:10' },
+    ];
+
+    const sampleBeats = [
+      { number: 1, beat: '1', time: '00:20', tension: 2 },
+      { number: 1, beat: '2', time: '01:10', tension: 5 },
+      { number: 1, beat: '3', time: '02:00', tension: 4 },
+      { number: 2, beat: '1', time: '00:15', tension: 3 },
+      { number: 2, beat: '2', time: '00:50', tension: 7 },
+      { number: 2, beat: '3', time: '01:30', tension: 5 },
+      { number: 3, beat: '1', time: '00:25', tension: 4 },
+      { number: 3, beat: '2', time: '01:35', tension: 8 },
+      { number: 3, beat: '3', time: '02:40', tension: 3 },
+    ];
+
+    const defaultOptions = {
+      showMarkers: true,
+      showNumberLines: true,
+      showBottomBox: true,
+      showBeatLabels: true,
+      showNumberLabels: true,
+    };
+
+    let lastSavedSerialized = '';
+    let saveTimer = null;
+
+    const els = {
+      title: document.getElementById('title'),
+      yMax: document.getElementById('yMax'),
+      lineColor: document.getElementById('lineColor'),
+      canvasWidth: document.getElementById('canvasWidth'),
+      canvasHeight: document.getElementById('canvasHeight'),
+      showMarkers: document.getElementById('showMarkers'),
+      showNumberLines: document.getElementById('showNumberLines'),
+      showBottomBox: document.getElementById('showBottomBox'),
+      showBeatLabels: document.getElementById('showBeatLabels'),
+      showNumberLabels: document.getElementById('showNumberLabels'),
+      numbersTableBody: document.querySelector('#numbersTable tbody'),
+      beatsTableBody: document.querySelector('#beatsTable tbody'),
+      addNumberBtn: document.getElementById('addNumberBtn'),
+      addBeatBtn: document.getElementById('addBeatBtn'),
+      sortBeatBtn: document.getElementById('sortBeatBtn'),
+      loadSampleBtn: document.getElementById('loadSampleBtn'),
+      restoreBtn: document.getElementById('restoreBtn'),
+      saveNowBtn: document.getElementById('saveNowBtn'),
+      downloadBtn: document.getElementById('downloadBtn'),
+      canvas: document.getElementById('graphCanvas'),
+      warningBox: document.getElementById('warningBox'),
+      statusBox: document.getElementById('statusBox'),
+    };
+
+    function setStatus(text) {
+      els.statusBox.textContent = text;
+    }
+
+    function mmssToSeconds(value) {
+      const text = String(value || '').trim();
+      const match = text.match(/^(\d{1,3}):(\d{2})$/);
+      if (!match) return NaN;
+      const minutes = Number(match[1]);
+      const seconds = Number(match[2]);
+      if (!Number.isFinite(minutes) || !Number.isFinite(seconds) || seconds >= 60) return NaN;
+      return minutes * 60 + seconds;
+    }
+
+    function secondsToMmss(totalSeconds) {
+      const safe = Math.max(0, Math.floor(totalSeconds));
+      const m = Math.floor(safe / 60);
+      const s = safe % 60;
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function createNumberRow(item = { number: '', label: '', duration: '' }) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input data-key="number" type="number" min="1" value="${item.number}"></td>
+        <td><input data-key="label" value="${item.label}"></td>
+        <td><input data-key="duration" placeholder="02:30" value="${item.duration}"></td>
+        <td class="row-actions"><button type="button" class="danger">삭제</button></td>
+      `;
+      tr.querySelectorAll('input').forEach(input => input.addEventListener('input', handleUserInput));
+      tr.querySelector('button').addEventListener('click', () => { tr.remove(); handleUserInput(); });
+      els.numbersTableBody.appendChild(tr);
+    }
+
+    function createBeatRow(item = { number: '', beat: '', time: '', tension: '' }) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input data-key="number" type="number" min="1" value="${item.number}"></td>
+        <td><input data-key="beat" value="${item.beat}"></td>
+        <td><input data-key="time" placeholder="00:45" value="${item.time}"></td>
+        <td><input data-key="tension" type="number" min="0" step="0.1" value="${item.tension}"></td>
+        <td class="row-actions"><button type="button" class="danger">삭제</button></td>
+      `;
+      tr.querySelectorAll('input').forEach(input => input.addEventListener('input', handleUserInput));
+      tr.querySelector('button').addEventListener('click', () => { tr.remove(); handleUserInput(); });
+      els.beatsTableBody.appendChild(tr);
+    }
+
+    function clearTables() {
+      els.numbersTableBody.innerHTML = '';
+      els.beatsTableBody.innerHTML = '';
+    }
+
+    function getNumbers() {
+      return [...els.numbersTableBody.querySelectorAll('tr')]
+        .map(tr => ({
+          number: Number(tr.querySelector('[data-key="number"]').value),
+          label: tr.querySelector('[data-key="label"]').value.trim(),
+          duration: tr.querySelector('[data-key="duration"]').value.trim(),
+        }))
+        .filter(n => Number.isFinite(n.number) && n.number > 0 && n.label && n.duration)
+        .sort((a, b) => a.number - b.number)
+        .map(n => ({ ...n, durationSec: mmssToSeconds(n.duration) }));
+    }
+
+    function getBeats() {
+      return [...els.beatsTableBody.querySelectorAll('tr')]
+        .map(tr => ({
+          number: Number(tr.querySelector('[data-key="number"]').value),
+          beat: tr.querySelector('[data-key="beat"]').value.trim(),
+          time: tr.querySelector('[data-key="time"]').value.trim(),
+          tension: Number(tr.querySelector('[data-key="tension"]').value),
+        }))
+        .filter(b => Number.isFinite(b.number) && b.number > 0 && b.beat && b.time && Number.isFinite(b.tension))
+        .map(b => ({ ...b, timeSec: mmssToSeconds(b.time) }))
+        .sort((a, b) => a.number - b.number || a.timeSec - b.timeSec);
+    }
+
+    function buildState() {
+      return {
+        title: els.title.value.trim(),
+        yMax: Number(els.yMax.value) || 10,
+        lineColor: els.lineColor.value || '#1f3fff',
+        canvasWidth: Number(els.canvasWidth.value) || 1700,
+        canvasHeight: Number(els.canvasHeight.value) || 760,
+        options: {
+          showMarkers: els.showMarkers.checked,
+          showNumberLines: els.showNumberLines.checked,
+          showBottomBox: els.showBottomBox.checked,
+          showBeatLabels: els.showBeatLabels.checked,
+          showNumberLabels: els.showNumberLabels.checked,
+        },
+        numbers: [...els.numbersTableBody.querySelectorAll('tr')].map(tr => ({
+          number: tr.querySelector('[data-key="number"]').value,
+          label: tr.querySelector('[data-key="label"]').value,
+          duration: tr.querySelector('[data-key="duration"]').value,
+        })),
+        beats: [...els.beatsTableBody.querySelectorAll('tr')].map(tr => ({
+          number: tr.querySelector('[data-key="number"]').value,
+          beat: tr.querySelector('[data-key="beat"]').value,
+          time: tr.querySelector('[data-key="time"]').value,
+          tension: tr.querySelector('[data-key="tension"]').value,
+        })),
+        savedAt: new Date().toISOString(),
+      };
+    }
+
+    function serializeState(state) {
+      return JSON.stringify(state);
+    }
+
+    function applyState(state) {
+      clearTables();
+      els.title.value = state.title ?? 'Musical Tension Graph';
+      els.yMax.value = state.yMax ?? 10;
+      els.lineColor.value = state.lineColor ?? '#1f3fff';
+      els.canvasWidth.value = state.canvasWidth ?? 1700;
+      els.canvasHeight.value = state.canvasHeight ?? 760;
+
+      const options = { ...defaultOptions, ...(state.options || {}) };
+      els.showMarkers.checked = !!options.showMarkers;
+      els.showNumberLines.checked = !!options.showNumberLines;
+      els.showBottomBox.checked = !!options.showBottomBox;
+      els.showBeatLabels.checked = !!options.showBeatLabels;
+      els.showNumberLabels.checked = !!options.showNumberLabels;
+
+      (state.numbers || []).forEach(item => createNumberRow(item));
+      (state.beats || []).forEach(item => createBeatRow(item));
+      render();
+    }
+
+    function makeSampleState() {
+      return {
+        title: 'Musical Tension Graph',
+        yMax: 10,
+        lineColor: '#1f3fff',
+        canvasWidth: 1700,
+        canvasHeight: 760,
+        options: { ...defaultOptions },
+        numbers: sampleNumbers,
+        beats: sampleBeats,
+      };
+    }
+
+    function validateAndBuild(numbers, beats) {
+      const warnings = [];
+      const numMap = new Map();
+      let offset = 0;
+
+      numbers.forEach(n => {
+        if (!Number.isFinite(n.durationSec)) warnings.push(`넘버 ${n.number}의 duration 형식이 잘못되었습니다: ${n.duration}`);
+        numMap.set(n.number, { ...n, offsetStart: offset, offsetEnd: offset + (Number.isFinite(n.durationSec) ? n.durationSec : 0) });
+        if (Number.isFinite(n.durationSec)) offset += n.durationSec;
+      });
+
+      const builtBeats = beats.map(b => {
+        const numberInfo = numMap.get(b.number);
+        if (!numberInfo) {
+          warnings.push(`비트 ${b.beat}: 연결된 넘버 ${b.number}가 없습니다.`);
+          return { ...b, globalSec: NaN };
+        }
+        if (!Number.isFinite(b.timeSec)) {
+          warnings.push(`비트 ${b.beat}: time 형식이 잘못되었습니다: ${b.time}`);
+          return { ...b, globalSec: NaN };
+        }
+        if (Number.isFinite(numberInfo.durationSec) && b.timeSec > numberInfo.durationSec) {
+          warnings.push(`비트 ${b.beat}: ${b.time}가 넘버 ${b.number}의 길이 ${numberInfo.duration}를 넘습니다.`);
+        }
+        return { ...b, globalSec: numberInfo.offsetStart + b.timeSec, offsetStart: numberInfo.offsetStart };
+      });
+
+      numbers.forEach(n => {
+        const inNumber = builtBeats.filter(b => b.number === n.number && Number.isFinite(b.timeSec));
+        for (let i = 1; i < inNumber.length; i++) {
+          if (inNumber[i].timeSec < inNumber[i - 1].timeSec) {
+            warnings.push(`넘버 ${n.number} 안의 time 값이 오름차순이 아닙니다.`);
+            break;
+          }
+        }
+      });
+
+      return { numMap, builtBeats: builtBeats.filter(b => Number.isFinite(b.globalSec)), warnings, totalDuration: offset };
+    }
+
+    function fitLabelX(x, min, max, padding = 20) {
+      return Math.min(max - padding, Math.max(min + padding, x));
+    }
+
+    function drawDashedLine(ctx, x, top, bottom) {
+      ctx.save();
+      ctx.setLineDash([8, 6]);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#222';
+      ctx.beginPath();
+      ctx.moveTo(x, top);
+      ctx.lineTo(x, bottom);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function renderWarning(warnings) {
+      if (!warnings.length) {
+        els.warningBox.style.display = 'none';
+        els.warningBox.textContent = '';
+        return;
+      }
+      els.warningBox.style.display = 'block';
+      els.warningBox.textContent = warnings.join('\n');
+    }
+
+    function render() {
+      const title = els.title.value.trim() || 'Musical Tension Graph';
+      const yMax = Math.max(1, Number(els.yMax.value) || 10);
+      const lineColor = els.lineColor.value || '#1f3fff';
+      const width = Math.max(1000, Number(els.canvasWidth.value) || 1700);
+      const height = Math.max(560, Number(els.canvasHeight.value) || 760);
+      const numbers = getNumbers();
+      const beats = getBeats();
+      const { numMap, builtBeats, warnings, totalDuration } = validateAndBuild(numbers, beats);
+      renderWarning(warnings);
+
+      const canvas = els.canvas;
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, width, height);
+
+      if (!numbers.length || !builtBeats.length || totalDuration <= 0) return;
+
+      const pad = { top: 42, right: 110, bottom: 32, left: 72 };
+      const graphTop = pad.top;
+      const graphBottom = height - 165;
+      const graphHeight = graphBottom - graphTop;
+      const tableTop = graphBottom;
+      const tableBottom = height - 32;
+      const plotLeft = pad.left;
+      const plotRight = width - pad.right;
+      const plotWidth = plotRight - plotLeft;
+
+      function xFromGlobalSec(sec) {
+        if (totalDuration === 0) return plotLeft + plotWidth / 2;
+        return plotLeft + (sec / totalDuration) * plotWidth;
+      }
+
+      ctx.fillStyle = '#111';
+      ctx.font = 'bold 22px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(title, width / 2, 28);
+
+      ctx.strokeStyle = '#222';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(plotLeft, graphTop, plotWidth, graphHeight);
+      ctx.beginPath();
+      ctx.moveTo(plotLeft, graphBottom);
+      ctx.lineTo(plotRight, graphBottom);
+      ctx.stroke();
+
+      for (let y = 0; y <= yMax; y++) {
+        const yPos = graphBottom - (y / yMax) * graphHeight;
+        ctx.beginPath();
+        ctx.moveTo(plotLeft - 7, yPos);
+        ctx.lineTo(plotLeft, yPos);
+        ctx.stroke();
+        ctx.font = '18px Arial';
+        ctx.textAlign = 'right';
+        ctx.fillText(String(y), plotLeft - 14, yPos + 6);
+      }
+
+      ctx.save();
+      ctx.translate(22, graphTop + graphHeight / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = 'center';
+      ctx.font = '18px Arial';
+      ctx.fillText('Tension', 0, 0);
+      ctx.restore();
+
+      if (els.showBottomBox.checked) {
+        ctx.strokeRect(plotLeft, tableTop, plotWidth, tableBottom - tableTop);
+      }
+
+      const points = builtBeats
+        .sort((a, b) => a.globalSec - b.globalSec)
+        .map(b => ({
+          ...b,
+          x: xFromGlobalSec(b.globalSec),
+          y: graphBottom - (b.tension / yMax) * graphHeight,
+        }));
+
+      if (els.showNumberLabels.checked) {
+        numbers.forEach(n => {
+          const info = numMap.get(n.number);
+          if (!info || !Number.isFinite(info.durationSec)) return;
+          const centerX = xFromGlobalSec(info.offsetStart + info.durationSec / 2);
+          ctx.textAlign = 'center';
+          ctx.font = '18px Arial';
+          ctx.fillStyle = '#111';
+          ctx.fillText(n.label, centerX, graphTop + 24);
+        });
+      }
+
+      if (els.showNumberLines.checked) {
+        numbers.slice(0, -1).forEach(n => {
+          const info = numMap.get(n.number);
+          if (!info || !Number.isFinite(info.durationSec)) return;
+          drawDashedLine(ctx, xFromGlobalSec(info.offsetEnd), graphTop, tableTop);
+        });
+      }
+
+      ctx.save();
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      points.forEach((p, i) => {
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.stroke();
+      ctx.restore();
+
+      if (els.showMarkers.checked) {
+        ctx.fillStyle = lineColor;
+        points.forEach(p => {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      ctx.strokeStyle = '#222';
+      ctx.lineWidth = 1.5;
+      points.forEach((p, index) => {
+        ctx.beginPath();
+        ctx.moveTo(p.x, tableTop);
+        ctx.lineTo(p.x, tableBottom);
+        ctx.stroke();
+
+        if (els.showBeatLabels.checked) {
+          ctx.font = '17px Arial';
+          ctx.fillStyle = '#111';
+          ctx.textAlign = 'center';
+          const x = index === 0 || index === points.length - 1 ? fitLabelX(p.x, plotLeft, plotRight, 16) : p.x;
+          ctx.fillText(String(p.beat), x, tableTop + 38);
+        }
+      });
+
+      ctx.font = '18px Arial';
+      ctx.fillStyle = '#111';
+      ctx.textAlign = 'left';
+      ctx.fillText('Beat', plotRight + 28, tableTop + 38);
+
+      ctx.textAlign = 'right';
+      ctx.font = '14px Arial';
+      ctx.fillStyle = '#666';
+      ctx.fillText(`Total duration ${secondsToMmss(totalDuration)}`, plotRight, height - 8);
+    }
+
+    function safeLocalStorageSet(key, value) {
+      try {
+        localStorage.setItem(key, value);
+        return true;
+      } catch (error) {
+        setStatus('브라우저 저장공간에 저장하지 못했습니다. 시크릿 모드나 저장공간 제한일 수 있습니다.');
+        return false;
+      }
+    }
+
+    function saveStateNow(reason = 'manual') {
+      const state = buildState();
+      const serialized = serializeState(state);
+      if (serialized === lastSavedSerialized && reason !== 'force') {
+        return;
+      }
+
+      const previous = localStorage.getItem(STORAGE_KEY_CURRENT);
+      if (previous && previous !== serialized) {
+        safeLocalStorageSet(STORAGE_KEY_BACKUP, previous);
+      }
+      const ok = safeLocalStorageSet(STORAGE_KEY_CURRENT, serialized);
+      if (ok) {
+        lastSavedSerialized = serialized;
+        const stamp = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        setStatus(`자동 저장됨 · ${stamp}`);
+      }
+    }
+
+    function scheduleAutosave() {
+      setStatus('변경 감지됨 · 자동 저장 준비 중');
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => saveStateNow('auto'), 500);
+    }
+
+    function handleUserInput() {
+      render();
+      scheduleAutosave();
+    }
+
+    function restorePreviousWork() {
+      const snapshot = localStorage.getItem(STORAGE_KEY_SNAPSHOT_BEFORE_SAMPLE);
+      const backup = localStorage.getItem(STORAGE_KEY_BACKUP);
+      const candidate = snapshot || backup;
+      if (!candidate) {
+        setStatus('복구 가능한 이전 작업이 없습니다.');
+        return;
+      }
+      try {
+        const parsed = JSON.parse(candidate);
+        applyState(parsed);
+        saveStateNow('force');
+        setStatus('이전 작업을 복구했습니다.');
+      } catch (error) {
+        setStatus('이전 작업 복구에 실패했습니다. 저장 데이터가 손상되었을 수 있습니다.');
+      }
+    }
+
+    function loadSamples() {
+      const currentSerialized = localStorage.getItem(STORAGE_KEY_CURRENT) || serializeState(buildState());
+      safeLocalStorageSet(STORAGE_KEY_SNAPSHOT_BEFORE_SAMPLE, currentSerialized);
+      const proceed = window.confirm('현재 작업을 샘플로 덮어쓸까요? 방금 작업은 [이전 작업 복구] 버튼으로 되돌릴 수 있습니다.');
+      if (!proceed) {
+        setStatus('샘플 불러오기를 취소했습니다.');
+        return;
+      }
+      applyState(makeSampleState());
+      saveStateNow('force');
+      setStatus('샘플을 불러왔습니다. 필요하면 [이전 작업 복구]를 누르세요.');
+    }
+
+    function loadInitialState() {
+      const saved = localStorage.getItem(STORAGE_KEY_CURRENT);
+      if (saved) {
+        try {
+          applyState(JSON.parse(saved));
+          lastSavedSerialized = saved;
+          setStatus('저장된 이전 작업을 불러왔습니다.');
+          return;
+        } catch (error) {
+          setStatus('저장된 작업을 읽지 못해 샘플로 시작합니다.');
+        }
+      }
+      applyState(makeSampleState());
+      saveStateNow('force');
+      setStatus('샘플로 시작했습니다. 자동 저장이 켜져 있습니다.');
+    }
+
+    function sortBeats() {
+      const beats = getBeats();
+      clearTimeout(saveTimer);
+      els.beatsTableBody.innerHTML = '';
+      beats.forEach(createBeatRow);
+      render();
+      saveStateNow('force');
+      setStatus('비트를 정렬했습니다.');
+    }
+
+    function buildDownloadBlob() {
+      return new Promise((resolve, reject) => {
+        try {
+          els.canvas.toBlob(blob => {
+            if (!blob) {
+              reject(new Error('blob 생성 실패'));
+              return;
+            }
+            resolve(blob);
+          }, 'image/png');
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+
+    async function downloadCanvas() {
+      render();
+      saveStateNow('force');
+      const safeTitle = (els.title.value.trim() || 'tension-graph').replace(/[^a-z0-9가-힣_-]+/gi, '_');
+      try {
+        const blob = await buildDownloadBlob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${safeTitle}.png`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        setStatus('PNG 다운로드를 시작했습니다. 브라우저가 차단했다면 다운로드 허용을 확인하세요.');
+      } catch (error) {
+        try {
+          const dataUrl = els.canvas.toDataURL('image/png');
+          const win = window.open('', '_blank');
+          if (win) {
+            win.document.write(`<title>${safeTitle}</title><img src="${dataUrl}" style="max-width:100%;height:auto;display:block;margin:0 auto;" />`);
+            setStatus('직접 다운로드가 막혀 새 창에 이미지를 열었습니다. 이미지 우클릭으로 저장하세요.');
+          } else {
+            setStatus('다운로드가 막혔고 새 창도 열 수 없습니다. 팝업 차단을 확인하세요.');
+          }
+        } catch (fallbackError) {
+          setStatus('PNG 다운로드에 실패했습니다. 브라우저 보안 설정을 확인하세요.');
+        }
+      }
+    }
+
+    els.addNumberBtn.addEventListener('click', () => {
+      const numbers = getNumbers();
+      const next = numbers.length ? Math.max(...numbers.map(n => n.number)) + 1 : 1;
+      createNumberRow({ number: next, label: `Number ${next}`, duration: '01:00' });
+      handleUserInput();
+    });
+
+    els.addBeatBtn.addEventListener('click', () => {
+      const beats = getBeats();
+      const last = beats[beats.length - 1];
+      const nextNumber = last ? last.number : 1;
+      const nextBeat = beats.filter(b => b.number === nextNumber).length + 1;
+      createBeatRow({ number: nextNumber, beat: String(nextBeat), time: '00:00', tension: 0 });
+      handleUserInput();
+    });
+
+    els.sortBeatBtn.addEventListener('click', sortBeats);
+    els.loadSampleBtn.addEventListener('click', loadSamples);
+    els.restoreBtn.addEventListener('click', restorePreviousWork);
+    els.saveNowBtn.addEventListener('click', () => { saveStateNow('force'); setStatus('현재 작업을 저장했습니다.'); });
+    els.downloadBtn.addEventListener('click', downloadCanvas);
+
+    [
+      els.title, els.yMax, els.lineColor, els.canvasWidth, els.canvasHeight,
+      els.showMarkers, els.showNumberLines, els.showBottomBox,
+      els.showBeatLabels, els.showNumberLabels,
+    ].forEach(el => el.addEventListener('input', handleUserInput));
+
+    window.addEventListener('beforeunload', () => {
+      try { saveStateNow('force'); } catch (error) {}
+    });
+
+    loadInitialState();
+  </script>
+</body>
+</html>
